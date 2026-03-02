@@ -2,46 +2,39 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR Attendance System</title>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            font-family: 'Outfit', sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(160deg, #0d1117 0%, #0f1f3d 40%, #101c35 70%, #0d1117 100%);
             min-height: 100vh;
             color: #e2e8f0;
-            overflow-x: hidden;
         }
 
         header {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            border-bottom: 3px solid #3b82f6;
+            background: #0d1117;
             color: white;
-            padding: 20px;
-            font-size: 22px;
-            font-weight: 800;
-            box-shadow: 0 4px 30px rgba(59, 130, 246, 0.3);
+            padding: 22px 40px;
+            font-size: 24px;
+            font-weight: bold;
+            box-shadow: 0 1px 0 rgba(59, 130, 246, 0.5);
             text-align: center;
-            letter-spacing: -0.5px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
+            border-bottom: 2px solid #1d4ed8;
         }
 
         .container {
             max-width: 1200px;
-            margin: 20px auto;
-            padding: 0 15px;
+            margin: 40px auto;
+            padding: 0 30px;
         }
 
         .page {
@@ -53,232 +46,202 @@
         }
 
         .card {
-            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-            padding: 25px;
-            border-radius: 20px;
-            box-shadow: 0 10px 60px rgba(0,0,0,0.5);
-            margin-bottom: 20px;
-            border: 1px solid #475569;
+            background: #161d2e;
+            padding: 35px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            margin-bottom: 30px;
+            border: 1px solid #1e2d4a;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 50px rgba(0,0,0,0.5);
         }
 
         .card h3 {
-            color: #60a5fa;
-            margin-bottom: 20px;
-            font-size: 20px;
-            font-weight: 800;
-            border-bottom: 3px solid #3b82f6;
+            color: #3b82f6;
+            margin-bottom: 25px;
+            font-size: 22px;
+            border-bottom: 2px solid #1d3461;
             padding-bottom: 10px;
         }
 
         label {
             display: block;
             font-weight: 600;
-            color: #cbd5e1;
+            color: #94a3b8;
             margin-bottom: 8px;
             margin-top: 15px;
-            font-size: 13px;
             text-transform: uppercase;
+            font-size: 12px;
             letter-spacing: 0.5px;
         }
 
         input, select {
             width: 100%;
-            padding: 14px 18px;
-            margin-bottom: 15px;
-            border-radius: 12px;
-            border: 2px solid #475569;
-            font-size: 16px;
-            font-family: 'Outfit', sans-serif;
-            background: #0f172a;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            border: 1px solid #1e2d4a;
+            background: #0d1117;
             color: #e2e8f0;
+            font-size: 14px;
             transition: all 0.3s ease;
         }
 
         input:focus, select:focus {
             outline: none;
             border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-            background: #1e293b;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        input::placeholder {
+            color: #4a5568;
         }
 
         button {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
             color: white;
             border: none;
-            padding: 16px 28px;
-            border-radius: 12px;
+            padding: 12px 24px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 16px;
-            font-weight: 700;
-            font-family: 'Outfit', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
             transition: all 0.3s ease;
             width: 100%;
             margin-top: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            touch-action: manipulation;
         }
 
-        button:active {
-            transform: scale(0.98);
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
         }
 
         .btn-logout {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            margin-top: 20px;
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            margin-top: 30px;
+        }
+
+        .btn-logout:hover {
+            box-shadow: 0 8px 20px rgba(220, 38, 38, 0.3);
         }
 
         .btn-link {
             background: transparent;
-            color: #60a5fa;
-            text-decoration: none;
-            margin-top: 15px;
-            border: 2px solid #3b82f6;
-            text-transform: none;
+            color: #2563eb;
+            text-decoration: underline;
+            margin-top: 20px;
         }
 
-        .btn-scan {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            margin-top: 10px;
+        .btn-link:hover {
+            transform: none;
+            box-shadow: none;
+            color: #3b82f6;
         }
 
         .row {
             display: flex;
-            gap: 15px;
+            gap: 20px;
             flex-wrap: wrap;
-            margin-top: 20px;
+            margin-top: 25px;
         }
 
         .box {
             flex: 1;
-            min-width: 150px;
-            padding: 20px;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            border-radius: 16px;
+            min-width: 200px;
+            padding: 25px;
+            background: #0d1117;
+            border-radius: 12px;
             text-align: center;
-            font-weight: 700;
-            border: 2px solid #3b82f6;
-            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.2);
+            font-weight: bold;
+            color: #94a3b8;
+            border: 1px solid #1e2d4a;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
 
         .box span {
             display: block;
             font-size: 36px;
-            color: #60a5fa;
+            color: #3b82f6;
             margin-top: 10px;
-            font-weight: 800;
         }
 
-        .qr-display-box {
-            background: white;
-            padding: 30px;
-            border: 3px solid #3b82f6;
-            text-align: center;
-            border-radius: 20px;
-            margin-top: 20px;
-            box-shadow: 0 0 50px rgba(59, 130, 246, 0.5);
-        }
-
-        #qrcode {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 0 auto;
-        }
-
-        #qrcode canvas {
-            max-width: 100%;
-            height: auto !important;
+        .analysis-item {
+            background: #0d1117;
+            padding: 15px;
+            margin: 10px 0;
             border-radius: 8px;
+            border-left: 4px solid #3b82f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #e2e8f0;
         }
 
-        .qr-code-text {
-            font-size: 16px;
-            font-weight: 800;
-            color: #1e293b;
-            margin-top: 15px;
-            font-family: 'JetBrains Mono', monospace;
-            letter-spacing: 1px;
-            word-break: break-all;
+        .analysis-item.low {
+            border-left-color: #dc2626;
+            background: #1a0a0a;
+        }
+
+        .percentage {
+            font-size: 24px;
+            font-weight: bold;
+            color: #3b82f6;
+        }
+
+        .percentage.low {
+            color: #dc2626;
+        }
+
+        .student-item {
+            background: #1a0a0a;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #dc2626;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #e2e8f0;
+        }
+
+        .student-item strong {
+            color: #f87171;
+        }
+
+        .qr-box {
+            font-size: 22px;
+            padding: 40px;
+            border: 2px dashed #1d4ed8;
+            text-align: center;
+            border-radius: 12px;
+            margin-top: 25px;
+            background: #0d1117;
+            font-weight: bold;
+            color: #3b82f6;
+            box-shadow: inset 0 2px 10px rgba(30, 64, 175, 0.1);
+            letter-spacing: 2px;
         }
 
         .hidden {
             display: none;
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            background: #1e293b;
-            border-radius: 12px;
-            overflow: hidden;
-            font-size: 14px;
-        }
-
-        th, td {
-            padding: 12px 8px;
-            border-bottom: 1px solid #334155;
-            text-align: center;
-        }
-
-        th {
-            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-            color: #60a5fa;
-            font-weight: 700;
-            text-transform: uppercase;
-            font-size: 11px;
-            letter-spacing: 1px;
-        }
-
-        .success {
-            color: #34d399;
-            font-weight: 700;
-            background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
-            padding: 14px;
-            border-radius: 12px;
-            margin-top: 15px;
-            border-left: 4px solid #10b981;
-            font-size: 14px;
-        }
-
-        .error {
-            color: #fca5a5;
-            font-weight: 700;
-            background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%);
-            padding: 14px;
-            border-radius: 12px;
-            margin-top: 15px;
-            border-left: 4px solid #ef4444;
-            font-size: 14px;
-        }
-
-        #qrTimer {
-            text-align: center;
-            margin-top: 15px;
-            font-size: 18px;
-            font-weight: 800;
-            color: #fca5a5;
-            background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%);
-            padding: 14px;
-            border-radius: 12px;
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        /* QR SCANNER STYLES */
         #qrScanner {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(15, 23, 42, 0.98);
+            background: rgba(0, 0, 0, 0.95);
             z-index: 10000;
             display: none;
             justify-content: center;
             align-items: center;
             flex-direction: column;
-            backdrop-filter: blur(10px);
         }
 
         #qrScanner.active {
@@ -286,97 +249,162 @@
         }
 
         #qrVideo {
-            width: 90%;
+            width: 100%;
             max-width: 500px;
             height: auto;
-            border: 4px solid #3b82f6;
-            border-radius: 20px;
-            box-shadow: 0 0 60px rgba(59, 130, 246, 0.5);
+            border: 3px solid #3b82f6;
+            border-radius: 12px;
         }
 
         #qrCanvas {
             display: none;
         }
 
-        .scanner-info {
-            color: white;
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            padding: 18px 30px;
-            border-radius: 16px;
-            margin-bottom: 20px;
-            font-size: 16px;
-            font-weight: 700;
-            text-align: center;
-            box-shadow: 0 10px 40px rgba(59, 130, 246, 0.4);
-            letter-spacing: 0.5px;
+        .scanner-overlay {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border: 3px solid #3b82f6;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+        }
+
+        .scanner-corner {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 4px solid #3b82f6;
+        }
+
+        .scanner-corner.top-left {
+            top: -3px;
+            left: -3px;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .scanner-corner.top-right {
+            top: -3px;
+            right: -3px;
+            border-left: none;
+            border-bottom: none;
+        }
+
+        .scanner-corner.bottom-left {
+            bottom: -3px;
+            left: -3px;
+            border-right: none;
+            border-top: none;
+        }
+
+        .scanner-corner.bottom-right {
+            bottom: -3px;
+            right: -3px;
+            border-left: none;
+            border-top: none;
         }
 
         .scanner-controls {
             margin-top: 20px;
-            width: 90%;
-            max-width: 500px;
-        }
-
-        .analysis-item {
-            background: #1e293b;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 12px;
-            border-left: 4px solid #3b82f6;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
+            gap: 15px;
         }
 
-        .analysis-item.low {
-            border-left-color: #ef4444;
-            background: #1e1b1b;
+        .scanner-info {
+            color: white;
+            background: rgba(59, 130, 246, 0.2);
+            padding: 15px 25px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            text-align: center;
         }
 
-        .percentage {
-            font-size: 24px;
-            font-weight: 800;
-            color: #60a5fa;
-            font-family: 'JetBrains Mono', monospace;
+        .btn-scan {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            margin-top: 10px;
         }
 
-        .percentage.low {
-            color: #f87171;
+        .btn-scan:hover {
+            box-shadow: 0 8px 20px rgba(5, 150, 105, 0.3);
         }
 
-        .student-item {
-            background: #2d1f1f;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 25px;
+            background: #0d1117;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th, td {
             padding: 15px;
-            margin: 10px 0;
-            border-radius: 12px;
-            border-left: 4px solid #ef4444;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
+            border-bottom: 1px solid #1e2d4a;
+            text-align: center;
+            color: #e2e8f0;
+        }
+
+        th {
+            background: #1a2540;
+            color: #3b82f6;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+        }
+
+        tr:hover {
+            background: #141d2e;
+        }
+
+        .success {
+            color: #059669;
+            font-weight: bold;
+            background: #0a1f14;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border-left: 4px solid #059669;
+        }
+
+        .error {
+            color: #dc2626;
+            font-weight: bold;
+            background: #1a0a0a;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border-left: 4px solid #dc2626;
+        }
+
+        #qrTimer {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #dc2626;
+            background: #1a0a0a;
+            padding: 12px;
+            border-radius: 8px;
         }
 
         @media (max-width: 768px) {
+            .container {
+                padding: 0 15px;
+                margin: 20px auto;
+            }
+
             header {
-                font-size: 18px;
-                padding: 15px;
+                font-size: 20px;
+                padding: 20px;
             }
 
             .card {
-                padding: 20px;
+                padding: 25px;
             }
 
             .box span {
                 font-size: 28px;
-            }
-
-            table {
-                font-size: 12px;
-            }
-
-            th, td {
-                padding: 10px 5px;
             }
         }
     </style>
@@ -384,7 +412,7 @@
 
 <body>
 
-<header>🎓 QR Attendance System</header>
+<header>🎓 Automated QR Attendance System</header>
 
 <div class="container">
 
@@ -420,13 +448,13 @@
             <input id="gpsRadius" type="number" placeholder="e.g., 50" value="50">
 
             <button id="setLocationBtn">📍 Set Current Location as Classroom</button>
-            <button id="saveSettingsBtn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">💾 Save Settings</button>
+            <button id="saveSettingsBtn" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">💾 Save Settings</button>
 
             <p id="locationMsg"></p>
 
-            <div id="currentSettings" style="margin-top: 20px; padding: 15px; background: #1e293b; border-radius: 12px; border-left: 4px solid #3b82f6; font-size: 14px;">
-                <strong style="color: #60a5fa;">Current Settings:</strong><br>
-                <span id="settingsDisplay" style="color: #cbd5e1;">No location configured yet</span>
+            <div id="currentSettings" style="margin-top: 20px; padding: 15px; background: #0d1117; border-radius: 8px; border-left: 4px solid #3b82f6; color: #94a3b8;">
+                <strong>Current Settings:</strong><br>
+                <span id="settingsDisplay">No location configured yet</span>
             </div>
         </div>
 
@@ -441,10 +469,7 @@
 
             <button id="generateQRBtn">🔄 Generate QR Code</button>
 
-            <div id="qrDisplay" class="qr-display-box hidden">
-                <div id="qrcode"></div>
-                <div class="qr-code-text" id="qrCodeText"></div>
-            </div>
+            <div id="qrDisplay" class="qr-box hidden"></div>
             <p id="qrTimer"></p>
 
             <div class="row">
@@ -461,12 +486,11 @@
             <h3>👨‍🎓 Student Attendance Section</h3>
 
             <label>Register Number</label>
-            <input id="regNoTeacher" placeholder="Enter Register Number">
+            <input id="regNoTeacher" placeholder="Enter Register Number (e.g., 2021CSE001)">
 
             <label>QR Code / Session ID</label>
-            <input id="qrInputTeacher" placeholder="Enter QR Code or Scan">
-
-            <button id="testCameraBtnTeacher" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">🎥 Test Camera Access</button>
+            <input id="qrInputTeacher" placeholder="Enter QR Code shown above">
+            
             <button id="scanQRBtnTeacher" class="btn-scan">📷 Scan QR Code</button>
             <button id="markTeacherBtn">✔ Mark Student Attendance</button>
 
@@ -479,12 +503,12 @@
         <div class="card">
             <h3>🧑‍💼 Admin Dashboard - Attendance Records</h3>
 
-            <button id="exportBtn" style="width: auto; margin-bottom: 20px; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">📥 Export to Excel</button>
+            <button id="exportBtn" style="width: auto; margin-bottom: 20px; background: linear-gradient(135deg, #059669 0%, #047857 100%);">📥 Export to Excel</button>
 
             <table>
                 <thead>
                     <tr>
-                        <th>Reg No</th>
+                        <th>Register No</th>
                         <th>Subject</th>
                         <th>Class</th>
                         <th>Date & Time</th>
@@ -492,12 +516,10 @@
                 </thead>
                 <tbody id="attendanceTable"></tbody>
             </table>
-
-            <button class="btn-logout" id="logoutAdminBtn">Logout</button>
         </div>
 
         <div class="card">
-            <h3>📊 Subject-wise Analysis</h3>
+            <h3>📊 Subject-wise Attendance Analysis</h3>
             <div id="subjectAnalysis"></div>
         </div>
 
@@ -505,25 +527,23 @@
             <h3>⚠️ Students Below 75% Attendance</h3>
             <div id="lowAttendance"></div>
         </div>
+
+        <div class="card">
+            <button class="btn-logout" id="logoutAdminBtn">Logout</button>
+        </div>
     </div>
 
     <!-- STUDENT PAGE -->
     <div id="studentPage" class="page">
         <div class="card">
-            <h3>👨‍🎓 Student Attendance</h3>
-
-            <div style="background: #1e293b; padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #f59e0b; font-size: 13px;">
-                <strong style="color: #fbbf24;">📱 First time using camera?</strong><br>
-                <span style="color: #cbd5e1;">Click "Test Camera Access" first to grant permissions, then use "Scan QR Code".</span>
-            </div>
+            <h3>👨‍🎓 Student Attendance (No Login Required)</h3>
 
             <label>Register Number</label>
-            <input id="regNo" placeholder="Enter Register Number">
+            <input id="regNo" placeholder="Enter Register Number (e.g., 2021CSE001)">
 
             <label>QR Code / Session ID</label>
-            <input id="qrInput" placeholder="Scan QR Code or Enter Manually">
-
-            <button id="testCameraBtn" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">🎥 Test Camera Access</button>
+            <input id="qrInput" placeholder="Enter QR Code shown by teacher">
+            
             <button id="scanQRBtn" class="btn-scan">📷 Scan QR Code</button>
             <button id="markAttendanceBtn">✔ Mark My Attendance</button>
 
@@ -543,199 +563,11 @@
         <canvas id="qrCanvas"></canvas>
     </div>
     <div class="scanner-controls">
-        <button id="closeScannerBtn" class="btn-logout" style="margin: 0;">Close Scanner</button>
+        <button id="closeScannerBtn" class="btn-logout" style="margin: 0; width: auto; padding: 12px 30px;">Close Scanner</button>
     </div>
 </div>
 
 <script>
-    // QR Code generation function (inline implementation)
-    function generateQRCode(text, size) {
-        const canvas = document.createElement('canvas');
-        const qr = {
-            typeNumber: 0,
-            errorCorrectLevel: 'H',
-            modules: null,
-            moduleCount: 0,
-            
-            addData: function(data) {
-                this.dataList = [data];
-            },
-            
-            make: function() {
-                this.makeImpl(false, this.getBestMaskPattern());
-            },
-            
-            makeImpl: function(test, maskPattern) {
-                this.moduleCount = this.typeNumber * 4 + 17;
-                this.modules = new Array(this.moduleCount);
-                
-                for (let row = 0; row < this.moduleCount; row++) {
-                    this.modules[row] = new Array(this.moduleCount);
-                }
-                
-                this.setupPositionProbePattern(0, 0);
-                this.setupPositionProbePattern(this.moduleCount - 7, 0);
-                this.setupPositionProbePattern(0, this.moduleCount - 7);
-                this.setupPositionAdjustPattern();
-                this.setupTimingPattern();
-                this.setupTypeInfo(test, maskPattern);
-                
-                if (this.typeNumber >= 7) {
-                    this.setupTypeNumber(test);
-                }
-                
-                this.mapData(this.dataList, maskPattern);
-            },
-            
-            setupPositionProbePattern: function(row, col) {
-                for (let r = -1; r <= 7; r++) {
-                    for (let c = -1; c <= 7; c++) {
-                        if (row + r < 0 || this.moduleCount <= row + r || col + c < 0 || this.moduleCount <= col + c) continue;
-                        
-                        if ((0 <= r && r <= 6 && (c == 0 || c == 6)) ||
-                            (0 <= c && c <= 6 && (r == 0 || r == 6)) ||
-                            (2 <= r && r <= 4 && 2 <= c && c <= 4)) {
-                            this.modules[row + r][col + c] = true;
-                        } else {
-                            this.modules[row + r][col + c] = false;
-                        }
-                    }
-                }
-            },
-            
-            getBestMaskPattern: function() {
-                let minLostPoint = 0;
-                let pattern = 0;
-                
-                for (let i = 0; i < 8; i++) {
-                    this.makeImpl(true, i);
-                    let lostPoint = this.getLostPoint();
-                    
-                    if (i == 0 || minLostPoint > lostPoint) {
-                        minLostPoint = lostPoint;
-                        pattern = i;
-                    }
-                }
-                
-                return pattern;
-            },
-            
-            getLostPoint: function() {
-                let lostPoint = 0;
-                
-                for (let row = 0; row < this.moduleCount; row++) {
-                    for (let col = 0; col < this.moduleCount; col++) {
-                        let sameCount = 0;
-                        let dark = this.modules[row][col];
-                        
-                        for (let r = -1; r <= 1; r++) {
-                            if (row + r < 0 || this.moduleCount <= row + r) continue;
-                            
-                            for (let c = -1; c <= 1; c++) {
-                                if (col + c < 0 || this.moduleCount <= col + c) continue;
-                                if (r == 0 && c == 0) continue;
-                                
-                                if (dark == this.modules[row + r][col + c]) {
-                                    sameCount++;
-                                }
-                            }
-                        }
-                        
-                        if (sameCount > 5) {
-                            lostPoint += (3 + sameCount - 5);
-                        }
-                    }
-                }
-                
-                return lostPoint;
-            },
-            
-            setupTimingPattern: function() {
-                for (let r = 8; r < this.moduleCount - 8; r++) {
-                    if (this.modules[r][6] != null) continue;
-                    this.modules[r][6] = (r % 2 == 0);
-                }
-                
-                for (let c = 8; c < this.moduleCount - 8; c++) {
-                    if (this.modules[6][c] != null) continue;
-                    this.modules[6][c] = (c % 2 == 0);
-                }
-            },
-            
-            setupPositionAdjustPattern: function() {
-                // Simplified for basic QR code
-            },
-            
-            setupTypeNumber: function(test) {
-                // Simplified for basic QR code
-            },
-            
-            setupTypeInfo: function(test, maskPattern) {
-                // Simplified for basic QR code
-            },
-            
-            mapData: function(data, maskPattern) {
-                // Simplified data mapping
-                let inc = -1;
-                let row = this.moduleCount - 1;
-                let bitIndex = 7;
-                let byteIndex = 0;
-                
-                for (let col = this.moduleCount - 1; col > 0; col -= 2) {
-                    if (col == 6) col--;
-                    
-                    while (true) {
-                        for (let c = 0; c < 2; c++) {
-                            if (this.modules[row][col - c] == null) {
-                                let dark = false;
-                                
-                                if (byteIndex < data.length) {
-                                    dark = (((data[byteIndex].charCodeAt(0) >>> bitIndex) & 1) == 1);
-                                }
-                                
-                                this.modules[row][col - c] = dark;
-                                bitIndex--;
-                                
-                                if (bitIndex == -1) {
-                                    byteIndex++;
-                                    bitIndex = 7;
-                                }
-                            }
-                        }
-                        
-                        row += inc;
-                        
-                        if (row < 0 || this.moduleCount <= row) {
-                            row -= inc;
-                            inc = -inc;
-                            break;
-                        }
-                    }
-                }
-            }
-        };
-        
-        // Simple QR generation
-        qr.typeNumber = 4; // Fixed type for simplicity
-        qr.addData(text);
-        qr.make();
-        
-        const cellSize = Math.floor(size / qr.moduleCount);
-        canvas.width = cellSize * qr.moduleCount;
-        canvas.height = cellSize * qr.moduleCount;
-        
-        const ctx = canvas.getContext('2d');
-        
-        for (let row = 0; row < qr.moduleCount; row++) {
-            for (let col = 0; col < qr.moduleCount; col++) {
-                ctx.fillStyle = qr.modules[row][col] ? '#000000' : '#ffffff';
-                ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
-            }
-        }
-        
-        return canvas;
-    }
-
     const TEACHER_PASS = "teacher123";
     const ADMIN_PASS = "admin123";
 
@@ -743,20 +575,25 @@
     let qrExpiry = null;
     let timerInterval = null;
     
+    // GPS and WiFi settings
     let classroomLocation = JSON.parse(localStorage.getItem("classroomLocation")) || null;
     let allowedWiFi = localStorage.getItem("allowedWiFi") || null;
     let allowedRadius = parseFloat(localStorage.getItem("allowedRadius")) || 50;
 
     let attendance = JSON.parse(localStorage.getItem("attendance")) || [];
     
+    // QR Scanner variables
     let qrStream = null;
     let scanningActive = false;
-    let currentScanTarget = null;
+    let currentScanTarget = null; // 'student' or 'teacher'
 
+    // Initialize event listeners when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
+        // Login page
         document.getElementById('loginBtn').addEventListener('click', login);
         document.getElementById('studentLinkBtn').addEventListener('click', () => showPage('studentPage'));
         
+        // Teacher page
         document.getElementById('setLocationBtn').addEventListener('click', setCurrentLocation);
         document.getElementById('saveSettingsBtn').addEventListener('click', saveLocationSettings);
         document.getElementById('generateQRBtn').addEventListener('click', generateQR);
@@ -764,19 +601,19 @@
         document.getElementById('markTeacherBtn').addEventListener('click', markAttendanceTeacher);
         document.getElementById('scanQRBtnTeacher').addEventListener('click', () => startScanner('teacher'));
         
+        // Admin page
         document.getElementById('exportBtn').addEventListener('click', exportToExcel);
         document.getElementById('logoutAdminBtn').addEventListener('click', logout);
         
+        // Student page
         document.getElementById('markAttendanceBtn').addEventListener('click', markAttendance);
         document.getElementById('backToLoginBtn').addEventListener('click', () => showPage('loginPage'));
         document.getElementById('scanQRBtn').addEventListener('click', () => startScanner('student'));
-        document.getElementById('testCameraBtn').addEventListener('click', testCameraPermission);
         
-        document.getElementById('scanQRBtnTeacher').addEventListener('click', () => startScanner('teacher'));
-        document.getElementById('testCameraBtnTeacher').addEventListener('click', testCameraPermission);
-        
+        // QR Scanner
         document.getElementById('closeScannerBtn').addEventListener('click', stopScanner);
         
+        // Enter key for password
         document.getElementById('password').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') login();
         });
@@ -790,8 +627,6 @@
         
         if (pageId === 'teacherPage') {
             displayCurrentSettings();
-        } else if (pageId === 'adminPage') {
-            loadTable();
         }
     }
 
@@ -806,26 +641,31 @@
             showPage('adminPage');
             loadTable();
         } else {
-            msg.textContent = "Invalid Password";
+            msg.textContent = "Invalid Credentials";
             msg.className = "error";
         }
     }
 
     function logout() {
+        if (timerInterval) {
+            clearInterval(timerInterval);
+        }
+        currentQR = null;
+        qrExpiry = null;
         showPage('loginPage');
-        document.getElementById("password").value = "";
     }
 
     function setCurrentLocation() {
         const msg = document.getElementById("locationMsg");
-        msg.textContent = "📍 Requesting location access...";
-        msg.className = "success";
-
+        
         if (!navigator.geolocation) {
             msg.textContent = "❌ Geolocation is not supported by your browser";
             msg.className = "error";
             return;
         }
+
+        msg.textContent = "📍 Getting your location...";
+        msg.className = "success";
 
         navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -833,60 +673,47 @@
                     lat: position.coords.latitude,
                     lng: position.coords.longitude
                 };
-                
                 msg.textContent = `✅ Location captured! Lat: ${classroomLocation.lat.toFixed(6)}, Lng: ${classroomLocation.lng.toFixed(6)}`;
                 msg.className = "success";
-                
-                displayCurrentSettings();
             },
             (error) => {
-                let errorMsg = '❌ Location access failed: ';
-                
-                switch(error.code) {
-                    case error.PERMISSION_DENIED:
-                        errorMsg += 'Please allow location access in your browser settings.';
-                        break;
-                    case error.POSITION_UNAVAILABLE:
-                        errorMsg += 'Location information is unavailable.';
-                        break;
-                    case error.TIMEOUT:
-                        errorMsg += 'The request to get location timed out.';
-                        break;
-                    default:
-                        errorMsg += 'An unknown error occurred.';
-                        break;
-                }
-                
-                msg.textContent = errorMsg;
+                msg.textContent = `❌ Error getting location: ${error.message}`;
                 msg.className = "error";
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
             }
         );
     }
 
     function saveLocationSettings() {
-        const wifiName = document.getElementById("wifiName").value.trim();
-        const radius = parseFloat(document.getElementById("gpsRadius").value) || 50;
+        const wifiName = document.getElementById("wifiName").value;
+        const radius = parseFloat(document.getElementById("gpsRadius").value);
         const msg = document.getElementById("locationMsg");
 
-        if (!classroomLocation) {
-            msg.textContent = "Please set classroom location first!";
+        if (!wifiName) {
+            msg.textContent = "❌ Please enter WiFi network name";
             msg.className = "error";
             return;
         }
 
-        allowedWiFi = wifiName || null;
+        if (!classroomLocation) {
+            msg.textContent = "❌ Please set classroom location first";
+            msg.className = "error";
+            return;
+        }
+
+        if (!radius || radius <= 0) {
+            msg.textContent = "❌ Please enter a valid radius";
+            msg.className = "error";
+            return;
+        }
+
+        allowedWiFi = wifiName;
         allowedRadius = radius;
 
         localStorage.setItem("classroomLocation", JSON.stringify(classroomLocation));
-        localStorage.setItem("allowedWiFi", allowedWiFi || "");
-        localStorage.setItem("allowedRadius", allowedRadius);
+        localStorage.setItem("allowedWiFi", allowedWiFi);
+        localStorage.setItem("allowedRadius", allowedRadius.toString());
 
-        msg.textContent = "✅ Settings Saved Successfully!";
+        msg.textContent = "✅ Location and WiFi settings saved successfully!";
         msg.className = "success";
         
         displayCurrentSettings();
@@ -894,82 +721,42 @@
 
     function displayCurrentSettings() {
         const display = document.getElementById("settingsDisplay");
-        
-        if (!classroomLocation) {
-            display.innerHTML = "No location configured yet";
-            return;
-        }
+        const wifiInput = document.getElementById("wifiName");
+        const radiusInput = document.getElementById("gpsRadius");
 
-        let html = `<strong style="color: #60a5fa;">📍 Location:</strong> ${classroomLocation.lat.toFixed(6)}, ${classroomLocation.lng.toFixed(6)}<br>`;
-        html += `<strong style="color: #60a5fa;">📡 Radius:</strong> ${allowedRadius}m<br>`;
-        html += `<strong style="color: #60a5fa;">📶 WiFi:</strong> ${allowedWiFi || "Not set (Optional)"}`;
-        
-        display.innerHTML = html;
-
-        document.getElementById("wifiName").value = allowedWiFi || "";
-        document.getElementById("gpsRadius").value = allowedRadius;
-    }
-
-    function generateQR() {
-        const subject = document.getElementById("subject").value;
-        const className = document.getElementById("className").value;
-        const msg = document.getElementById("locationMsg");
-
-        if (!subject || !className) {
-            msg.textContent = "Please enter Subject and Class";
-            msg.className = "error";
-            return;
-        }
-
-        currentQR = `${subject}_${className}_${Date.now()}`;
-        qrExpiry = Date.now() + 5 * 60 * 1000;
-
-        const qrcodeDiv = document.getElementById("qrcode");
-        qrcodeDiv.innerHTML = "";
-
-        try {
-            const qrCanvas = generateQRCode(currentQR, 256);
-            qrcodeDiv.appendChild(qrCanvas);
-
-            document.getElementById("qrCodeText").textContent = currentQR;
-            document.getElementById("qrDisplay").classList.remove("hidden");
-            document.getElementById("presentCount").textContent = "0";
-
-            msg.textContent = "✅ QR Code Generated Successfully!";
-            msg.className = "success";
-
-            startTimer();
-        } catch (error) {
-            msg.textContent = "Error generating QR code: " + error.message;
-            msg.className = "error";
-            console.error("QR Generation Error:", error);
+        if (classroomLocation && allowedWiFi) {
+            display.innerHTML = `
+                📍 <strong>Location:</strong> Lat ${classroomLocation.lat.toFixed(6)}, Lng ${classroomLocation.lng.toFixed(6)}<br>
+                📶 <strong>WiFi:</strong> ${allowedWiFi}<br>
+                📏 <strong>Radius:</strong> ${allowedRadius} meters
+            `;
+            wifiInput.value = allowedWiFi;
+            radiusInput.value = allowedRadius;
+        } else {
+            display.textContent = "No location configured yet. Please set up location and WiFi settings.";
         }
     }
 
-    function startTimer() {
-        if (timerInterval) clearInterval(timerInterval);
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371e3;
+        const φ1 = lat1 * Math.PI / 180;
+        const φ2 = lat2 * Math.PI / 180;
+        const Δφ = (lat2 - lat1) * Math.PI / 180;
+        const Δλ = (lon2 - lon1) * Math.PI / 180;
 
-        timerInterval = setInterval(() => {
-            const remaining = Math.max(0, qrExpiry - Date.now());
-            const mins = Math.floor(remaining / 60000);
-            const secs = Math.floor((remaining % 60000) / 1000);
+        const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ/2) * Math.sin(Δλ/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
-            document.getElementById("qrTimer").textContent = 
-                remaining > 0 ? `⏱️ Time Remaining: ${mins}m ${secs}s` : "⏱️ QR Code Expired";
-
-            if (remaining === 0) {
-                clearInterval(timerInterval);
-                currentQR = null;
-            }
-        }, 1000);
+        return R * c;
     }
 
     async function verifyLocationAndWiFi() {
-        if (!classroomLocation) {
+        if (!classroomLocation || !allowedWiFi) {
             return {
-                valid: true,
-                showWiFiWarning: false,
-                message: "Location verification not configured"
+                valid: false,
+                message: "⚠️ Classroom location and WiFi not configured by teacher. Please contact your teacher."
             };
         }
 
@@ -982,49 +769,76 @@
                 });
             });
 
+            const currentLat = position.coords.latitude;
+            const currentLng = position.coords.longitude;
             const distance = calculateDistance(
                 classroomLocation.lat,
                 classroomLocation.lng,
-                position.coords.latitude,
-                position.coords.longitude
+                currentLat,
+                currentLng
             );
 
             if (distance > allowedRadius) {
                 return {
                     valid: false,
-                    showWiFiWarning: false,
-                    message: `❌ You are ${Math.round(distance)}m away from the classroom. Must be within ${allowedRadius}m.`
+                    message: `❌ You are ${Math.round(distance)}m away from classroom. You must be within ${allowedRadius}m radius.`
                 };
             }
 
             return {
                 valid: true,
-                showWiFiWarning: allowedWiFi ? true : false,
-                message: "Location verified"
+                message: `✅ Location verified! Please ensure you're connected to "${allowedWiFi}" WiFi network.`,
+                showWiFiWarning: true
             };
 
         } catch (error) {
             return {
                 valid: false,
-                showWiFiWarning: false,
-                message: "❌ Location access denied or unavailable"
+                message: `❌ Cannot verify location: ${error.message}. Please enable location services.`
             };
         }
     }
 
-    function calculateDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371e3;
-        const φ1 = lat1 * Math.PI / 180;
-        const φ2 = lat2 * Math.PI / 180;
-        const Δφ = (lat2 - lat1) * Math.PI / 180;
-        const Δλ = (lon2 - lon1) * Math.PI / 180;
+    function generateQR() {
+        const subject = document.getElementById("subject").value;
+        const className = document.getElementById("className").value;
 
-        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-                Math.cos(φ1) * Math.cos(φ2) *
-                Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        if (!subject || !className) {
+            alert("Please enter both subject and class");
+            return;
+        }
 
-        return R * c;
+        currentQR = "QR-" + Math.floor(Math.random() * 100000);
+        qrExpiry = Date.now() + 2 * 60 * 1000;
+
+        const qrBox = document.getElementById("qrDisplay");
+        qrBox.textContent = currentQR;
+        qrBox.classList.remove("hidden");
+
+        startTimer();
+    }
+
+    function startTimer() {
+        const timer = document.getElementById("qrTimer");
+
+        if (timerInterval) {
+            clearInterval(timerInterval);
+        }
+
+        timerInterval = setInterval(() => {
+            const remaining = qrExpiry - Date.now();
+
+            if (remaining <= 0) {
+                clearInterval(timerInterval);
+                timer.textContent = "⏰ QR Code Expired";
+                timer.style.background = "#1a0a0a";
+                currentQR = null;
+            } else {
+                const seconds = Math.floor(remaining / 1000);
+                timer.textContent = `⏱️ QR Expires in ${seconds} seconds`;
+                timer.style.background = seconds <= 30 ? "#1a0a0a" : "#1a0d0d";
+            }
+        }, 1000);
     }
 
     async function markAttendance() {
@@ -1038,7 +852,7 @@
             return;
         }
 
-        msg.textContent = "🔍 Verifying location...";
+        msg.textContent = "🔍 Verifying your location...";
         msg.className = "success";
 
         const verification = await verifyLocationAndWiFi();
@@ -1064,13 +878,16 @@
         const record = {
             reg,
             qr,
-            subject: qr.split('_')[0],
-            className: qr.split('_')[1],
+            subject: document.getElementById("subject").value,
+            className: document.getElementById("className").value,
             time: new Date().toLocaleString()
         };
 
         attendance.push(record);
         localStorage.setItem("attendance", JSON.stringify(attendance));
+
+        const currentSessionCount = attendance.filter(a => a.qr === qr).length;
+        document.getElementById("presentCount").textContent = currentSessionCount;
 
         let successMsg = "✅ Attendance Marked Successfully!";
         if (verification.showWiFiWarning) {
@@ -1149,16 +966,16 @@
         tbody.innerHTML = "";
 
         if (attendance.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="padding: 30px; color: #94a3b8;">No attendance records found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" style="padding: 30px; color: #9ca3af;">No attendance records found</td></tr>';
             return;
         }
 
         attendance.forEach(a => {
             const row = `<tr>
-                <td style="font-weight: 600; color: #60a5fa;">${a.reg}</td>
+                <td style="font-weight: 600; color: #3b82f6;">${a.reg}</td>
                 <td>${a.subject}</td>
                 <td>${a.className}</td>
-                <td style="font-size: 12px; color: #94a3b8;">${a.time}</td>
+                <td style="font-size: 13px; color: #6b7280;">${a.time}</td>
             </tr>`;
             tbody.innerHTML += row;
         });
@@ -1191,8 +1008,8 @@
             html += `
                 <div class="analysis-item ${isLow ? 'low' : ''}">
                     <div>
-                        <strong style="color: #e2e8f0;">${subject}</strong>
-                        <div style="font-size: 12px; color: #94a3b8; margin-top: 5px;">
+                        <strong>${subject}</strong>
+                        <div style="font-size: 13px; color: #6b7280; margin-top: 5px;">
                             ${attended} / ${totalStudents} students
                         </div>
                     </div>
@@ -1201,7 +1018,7 @@
             `;
         });
 
-        analysisDiv.innerHTML = html || '<p style="color: #94a3b8; text-align: center; padding: 20px;">No data available</p>';
+        analysisDiv.innerHTML = html || '<p style="color: #9ca3af; text-align: center; padding: 20px;">No data available</p>';
     }
 
     function loadLowAttendance() {
@@ -1239,8 +1056,8 @@
                     html += `
                         <div class="student-item">
                             <div>
-                                <strong style="color: #fca5a5;">${reg}</strong>
-                                <div style="font-size: 12px; color: #fca5a5; margin-top: 5px;">
+                                <strong>${reg}</strong>
+                                <div style="font-size: 13px; color: #991b1b; margin-top: 5px;">
                                     Subject: ${subject} | ${attended}/${total} classes
                                 </div>
                             </div>
@@ -1252,7 +1069,7 @@
         });
 
         if (!hasLowAttendance) {
-            html = '<p style="color: #34d399; text-align: center; padding: 20px; background: #064e3b; border-radius: 12px;">✔ All students have attendance above 75%</p>';
+            html = '<p style="color: #059669; text-align: center; padding: 20px; background: #0a1f14; border-radius: 8px;">✔ All students have attendance above 75%</p>';
         }
 
         lowDiv.innerHTML = html;
@@ -1270,105 +1087,89 @@
             csv += `${record.reg},${record.subject},${record.className},${record.time}\n`;
         });
 
+        csv += "\n\nSubject-wise Analysis\n";
+        csv += "Subject,Total Students,Present,Percentage\n";
+        
+        const subjectStats = {};
+        attendance.forEach(record => {
+            if (!subjectStats[record.subject]) {
+                subjectStats[record.subject] = new Set();
+            }
+            subjectStats[record.subject].add(record.reg);
+        });
+
+        const allStudents = new Set(attendance.map(a => a.reg));
+        const totalStudents = allStudents.size || 50;
+
+        Object.keys(subjectStats).forEach(subject => {
+            const attended = subjectStats[subject].size;
+            const percentage = ((attended / totalStudents) * 100).toFixed(1);
+            csv += `${subject},${totalStudents},${attended},${percentage}%\n`;
+        });
+
+        csv += "\n\nStudents Below 75% Attendance\n";
+        csv += "Register No,Subject,Classes Attended,Total Classes,Percentage\n";
+
+        const studentStats = {};
+        const sessionsBySubject = {};
+        
+        attendance.forEach(record => {
+            if (!studentStats[record.reg]) {
+                studentStats[record.reg] = {};
+            }
+            if (!studentStats[record.reg][record.subject]) {
+                studentStats[record.reg][record.subject] = 0;
+            }
+            studentStats[record.reg][record.subject]++;
+            
+            if (!sessionsBySubject[record.subject]) {
+                sessionsBySubject[record.subject] = new Set();
+            }
+            sessionsBySubject[record.subject].add(record.qr);
+        });
+
+        Object.keys(studentStats).forEach(reg => {
+            Object.keys(studentStats[reg]).forEach(subject => {
+                const attended = studentStats[reg][subject];
+                const total = sessionsBySubject[subject].size;
+                const percentage = ((attended / total) * 100).toFixed(1);
+                
+                if (percentage < 75) {
+                    csv += `${reg},${subject},${attended},${total},${percentage}%\n`;
+                }
+            });
+        });
+
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Attendance_${new Date().toISOString().split('T')[0]}.csv`;
+        a.download = `Attendance_Report_${new Date().toISOString().split('T')[0]}.csv`;
         a.click();
         window.URL.revokeObjectURL(url);
     }
 
-    // Test camera permission
-    async function testCameraPermission() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: 'environment' },
-                audio: false
-            });
-            
-            // Stop the stream immediately
-            stream.getTracks().forEach(track => track.stop());
-            
-            alert('✅ Camera access granted! You can now scan QR codes.');
-        } catch (err) {
-            console.error('Camera test error:', err);
-            let errorMsg = '❌ Camera access test failed.\n\n';
-            
-            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                errorMsg += 'Permission denied. Please:\n';
-                errorMsg += '1. Click the 🔒 lock icon in the address bar\n';
-                errorMsg += '2. Allow camera access\n';
-                errorMsg += '3. Refresh the page and try again';
-            } else if (err.name === 'NotFoundError') {
-                errorMsg += 'No camera found on your device.';
-            } else if (err.name === 'NotReadableError') {
-                errorMsg += 'Camera is being used by another app. Close other camera apps and try again.';
-            } else {
-                errorMsg += 'Error: ' + err.message;
-            }
-            
-            alert(errorMsg);
-        }
-    }
-
+    // QR SCANNER FUNCTIONS
     async function startScanner(target) {
         currentScanTarget = target;
         const scanner = document.getElementById('qrScanner');
         const video = document.getElementById('qrVideo');
-        const scannerInfo = document.querySelector('.scanner-info');
+        const canvas = document.getElementById('qrCanvas');
         
         scanner.classList.add('active');
         scanningActive = true;
         
-        scannerInfo.textContent = '📷 Requesting camera access...';
-        
         try {
-            // Check if we're on mobile
-            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-            
-            // Request camera permission explicitly
-            const constraints = {
-                video: {
-                    facingMode: { ideal: 'environment' },
-                    width: { ideal: isMobile ? 1920 : 1280 },
-                    height: { ideal: isMobile ? 1080 : 720 }
-                },
-                audio: false
-            };
-            
-            qrStream = await navigator.mediaDevices.getUserMedia(constraints);
-            
+            qrStream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'environment' } 
+            });
             video.srcObject = qrStream;
             video.setAttribute('playsinline', true);
-            video.setAttribute('autoplay', true);
-            video.muted = true;
-            
             await video.play();
             
-            scannerInfo.textContent = '📷 Point camera at QR code';
-            
             requestAnimationFrame(scanQRCode);
-            
         } catch (err) {
-            console.error('Camera Error:', err);
-            let errorMsg = 'Camera access failed. ';
-            
-            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                errorMsg += 'Please allow camera access in your browser settings.';
-            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-                errorMsg += 'No camera found on your device.';
-            } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-                errorMsg += 'Camera is already in use by another app.';
-            } else if (err.name === 'OverconstrainedError') {
-                errorMsg += 'Camera does not support the required constraints.';
-            } else if (err.name === 'SecurityError') {
-                errorMsg += 'Camera access blocked by browser security.';
-            } else {
-                errorMsg += err.message || 'Unknown error occurred.';
-            }
-            
-            alert(errorMsg);
+            alert('Camera access denied or not available. Please allow camera permissions.');
             stopScanner();
         }
     }
@@ -1406,14 +1207,16 @@
             document.getElementById('qrInputTeacher').value = qrData;
         }
         
+        stopScanner();
+        
+        // Show success feedback
         const scannerInfo = document.querySelector('.scanner-info');
         scannerInfo.textContent = '✅ QR Code Scanned Successfully!';
-        scannerInfo.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+        scannerInfo.style.background = 'rgba(5, 150, 105, 0.3)';
         
         setTimeout(() => {
-            stopScanner();
             scannerInfo.textContent = '📷 Point camera at QR code';
-            scannerInfo.style.background = 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)';
+            scannerInfo.style.background = 'rgba(59, 130, 246, 0.2)';
         }, 1000);
     }
     
