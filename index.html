@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR Attendance System</title>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    
 
     <style>
         * {
@@ -467,7 +467,7 @@
             <label>Class / Section</label>
             <input id="className" placeholder="Enter Class (e.g., CSE-A)">
 
-            <button id="generateQRBtn">🔄 Generate QR Code</button>
+            <button id="generateQRBtn">🔄 Generate Session Code</button>
 
             <div id="qrDisplay" class="qr-box hidden"></div>
             <p id="qrTimer"></p>
@@ -488,10 +488,9 @@
             <label>Register Number</label>
             <input id="regNoTeacher" placeholder="Enter Register Number (e.g., 2021CSE001)">
 
-            <label>QR Code / Session ID</label>
-            <input id="qrInputTeacher" placeholder="Enter QR Code shown above">
+            <label>Session Code</label>
+            <input id="qrInputTeacher" placeholder="Enter Session Code shown above">
             
-            <button id="scanQRBtnTeacher" class="btn-scan">📷 Scan QR Code</button>
             <button id="markTeacherBtn">✔ Mark Student Attendance</button>
 
             <p id="studentMsgTeacher"></p>
@@ -541,10 +540,9 @@
             <label>Register Number</label>
             <input id="regNo" placeholder="Enter Register Number (e.g., 2021CSE001)">
 
-            <label>QR Code / Session ID</label>
-            <input id="qrInput" placeholder="Enter QR Code shown by teacher">
+            <label>Session Code</label>
+            <input id="qrInput" placeholder="Enter Session Code shown by teacher">
             
-            <button id="scanQRBtn" class="btn-scan">📷 Scan QR Code</button>
             <button id="markAttendanceBtn">✔ Mark My Attendance</button>
 
             <p id="studentMsg"></p>
@@ -555,17 +553,6 @@
 
 </div>
 
-<!-- QR SCANNER MODAL -->
-<div id="qrScanner">
-    <div class="scanner-info">📷 Point camera at QR code</div>
-    <div style="position: relative;">
-        <video id="qrVideo" autoplay playsinline></video>
-        <canvas id="qrCanvas"></canvas>
-    </div>
-    <div class="scanner-controls">
-        <button id="closeScannerBtn" class="btn-logout" style="margin: 0; width: auto; padding: 12px 30px;">Close Scanner</button>
-    </div>
-</div>
 
 <script>
     const TEACHER_PASS = "teacher123";
@@ -581,11 +568,6 @@
     let allowedRadius = parseFloat(localStorage.getItem("allowedRadius")) || 50;
 
     let attendance = JSON.parse(localStorage.getItem("attendance")) || [];
-    
-    // QR Scanner variables
-    let qrStream = null;
-    let scanningActive = false;
-    let currentScanTarget = null; // 'student' or 'teacher'
 
     // Initialize event listeners when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
@@ -599,7 +581,6 @@
         document.getElementById('generateQRBtn').addEventListener('click', generateQR);
         document.getElementById('logoutTeacherBtn').addEventListener('click', logout);
         document.getElementById('markTeacherBtn').addEventListener('click', markAttendanceTeacher);
-        document.getElementById('scanQRBtnTeacher').addEventListener('click', () => startScanner('teacher'));
         
         // Admin page
         document.getElementById('exportBtn').addEventListener('click', exportToExcel);
@@ -608,10 +589,6 @@
         // Student page
         document.getElementById('markAttendanceBtn').addEventListener('click', markAttendance);
         document.getElementById('backToLoginBtn').addEventListener('click', () => showPage('loginPage'));
-        document.getElementById('scanQRBtn').addEventListener('click', () => startScanner('student'));
-        
-        // QR Scanner
-        document.getElementById('closeScannerBtn').addEventListener('click', stopScanner);
         
         // Enter key for password
         document.getElementById('password').addEventListener('keypress', function(e) {
@@ -830,12 +807,12 @@
 
             if (remaining <= 0) {
                 clearInterval(timerInterval);
-                timer.textContent = "⏰ QR Code Expired";
+                timer.textContent = "⏰ Session Code Expired";
                 timer.style.background = "#1a0a0a";
                 currentQR = null;
             } else {
                 const seconds = Math.floor(remaining / 1000);
-                timer.textContent = `⏱️ QR Expires in ${seconds} seconds`;
+                timer.textContent = `⏱️ Session Code expires in ${seconds} seconds`;
                 timer.style.background = seconds <= 30 ? "#1a0a0a" : "#1a0d0d";
             }
         }, 1000);
@@ -864,7 +841,7 @@
         }
 
         if (!currentQR || qr !== currentQR) {
-            msg.textContent = "Invalid or Expired QR Code";
+            msg.textContent = "Invalid or Expired Session Code";
             msg.className = "error";
             return;
         }
@@ -924,7 +901,7 @@
         }
 
         if (!currentQR || qr !== currentQR) {
-            msg.textContent = "Invalid or Expired QR Code";
+            msg.textContent = "Invalid or Expired Session Code";
             msg.className = "error";
             return;
         }
@@ -1149,90 +1126,6 @@
         window.URL.revokeObjectURL(url);
     }
 
-    // QR SCANNER FUNCTIONS
-    async function startScanner(target) {
-        currentScanTarget = target;
-        const scanner = document.getElementById('qrScanner');
-        const video = document.getElementById('qrVideo');
-        const canvas = document.getElementById('qrCanvas');
-        
-        scanner.classList.add('active');
-        scanningActive = true;
-        
-        try {
-            qrStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: 'environment' } 
-            });
-            video.srcObject = qrStream;
-            video.setAttribute('playsinline', true);
-            await video.play();
-            
-            requestAnimationFrame(scanQRCode);
-        } catch (err) {
-            alert('Camera access denied or not available. Please allow camera permissions.');
-            stopScanner();
-        }
-    }
-    
-    function scanQRCode() {
-        if (!scanningActive) return;
-        
-        const video = document.getElementById('qrVideo');
-        const canvas = document.getElementById('qrCanvas');
-        const context = canvas.getContext('2d');
-        
-        if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            canvas.height = video.videoHeight;
-            canvas.width = video.videoWidth;
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-            const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                inversionAttempts: "dontInvert",
-            });
-            
-            if (code) {
-                handleQRCodeDetected(code.data);
-                return;
-            }
-        }
-        
-        requestAnimationFrame(scanQRCode);
-    }
-    
-    function handleQRCodeDetected(qrData) {
-        if (currentScanTarget === 'student') {
-            document.getElementById('qrInput').value = qrData;
-        } else if (currentScanTarget === 'teacher') {
-            document.getElementById('qrInputTeacher').value = qrData;
-        }
-        
-        stopScanner();
-        
-        // Show success feedback
-        const scannerInfo = document.querySelector('.scanner-info');
-        scannerInfo.textContent = '✅ QR Code Scanned Successfully!';
-        scannerInfo.style.background = 'rgba(5, 150, 105, 0.3)';
-        
-        setTimeout(() => {
-            scannerInfo.textContent = '📷 Point camera at QR code';
-            scannerInfo.style.background = 'rgba(59, 130, 246, 0.2)';
-        }, 1000);
-    }
-    
-    function stopScanner() {
-        scanningActive = false;
-        const scanner = document.getElementById('qrScanner');
-        const video = document.getElementById('qrVideo');
-        
-        if (qrStream) {
-            qrStream.getTracks().forEach(track => track.stop());
-            qrStream = null;
-        }
-        
-        video.srcObject = null;
-        scanner.classList.remove('active');
-    }
 </script>
 
 </body>
