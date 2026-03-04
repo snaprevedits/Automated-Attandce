@@ -880,11 +880,21 @@
         return R * c;
     }
 
-    // Session store - holds location data keyed by short code (same browser tab shared between teacher & student)
-    const sessionStore = {};
+    // Session store backed by localStorage so student can access teacher's session
+    const sessionStore = {
+        set(code, data) {
+            const store = JSON.parse(localStorage.getItem('sessionStore') || '{}');
+            store[code] = data;
+            localStorage.setItem('sessionStore', JSON.stringify(store));
+        },
+        get(code) {
+            const store = JSON.parse(localStorage.getItem('sessionStore') || '{}');
+            return store[code] || null;
+        }
+    };
 
     function decodeSessionCode(code) {
-        return sessionStore[code.trim().toUpperCase()] || null;
+        return sessionStore.get(code.trim()) || null;
     }
 
     async function getAccuratePosition() {
@@ -978,14 +988,14 @@
         const expiry = Date.now() + 2 * 60 * 1000;
 
         // Store location data in sessionStore keyed by code
-        sessionStore[code] = {
+        sessionStore.set(code, {
             lat: classroomLocation.lat,
             lng: classroomLocation.lng,
             radius: allowedRadius,
             expiry,
             subject: selectedTeacher ? selectedTeacher.subject : "General",
             className
-        };
+        });
 
         currentQR = code;
         qrExpiry = expiry;
@@ -1042,7 +1052,7 @@
             return;
         }
 
-        if (!currentQR || qr.trim().toUpperCase() !== currentQR.trim().toUpperCase()) {
+        if (!currentQR || qr.trim() !== currentQR.trim()) {
             msg.textContent = "Invalid or Expired Session Code";
             msg.className = "error";
             return;
@@ -1054,11 +1064,12 @@
             return;
         }
 
+        const session = sessionStore.get(qr.trim());
         const record = {
             reg,
             qr,
-            subject: sessionStore[qr.trim()] ? sessionStore[qr.trim()].subject : (selectedTeacher ? selectedTeacher.subject : "N/A"),
-            className: sessionStore[qr.trim()] ? sessionStore[qr.trim()].className : "N/A",
+            subject: session ? session.subject : (selectedTeacher ? selectedTeacher.subject : "N/A"),
+            className: session ? session.className : "N/A",
             time: new Date().toLocaleString()
         };
 
@@ -1099,7 +1110,7 @@
             return;
         }
 
-        if (!currentQR || qr !== currentQR) {
+        if (!currentQR || qr.trim() !== currentQR.trim()) {
             msg.textContent = "Invalid or Expired Session Code";
             msg.className = "error";
             return;
