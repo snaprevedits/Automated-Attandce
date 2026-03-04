@@ -882,12 +882,31 @@
         return R * c;
     }
 
-    async function verifyLocation() {
-        if (!classroomLocation) {
-            return {
-                valid: false,
-                message: "⚠️ Teacher has not set classroom location yet. Please ask your teacher to configure GPS settings."
-            };
+    function decodeSessionCode(code) {
+        try {
+            const parts = code.trim().toUpperCase().split('-');
+            if (parts.length !== 5) return null;
+            const [rand, latEnc, lngEnc, radEnc, expEnc] = parts;
+            const lat = parseInt(latEnc, 36) / 10000 - 90;
+            const lng = parseInt(lngEnc, 36) / 10000 - 180;
+            const radius = parseInt(radEnc, 36);
+            const expiry = parseInt(expEnc, 36) * 1000;
+            if (isNaN(lat) || isNaN(lng) || isNaN(radius) || isNaN(expiry)) return null;
+            return { lat, lng, radius, expiry };
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async function verifyLocation(sessionCode) {
+        const decoded = decodeSessionCode(sessionCode);
+
+        if (!decoded) {
+            return { valid: false, message: "❌ Invalid session code format." };
+        }
+
+        if (Date.now() > decoded.expiry) {
+            return { valid: false, message: "⏰ Session code has expired. Ask your teacher to generate a new one." };
         }
 
         if (!navigator.geolocation) {
@@ -905,17 +924,12 @@
 
             const studentLat = position.coords.latitude;
             const studentLng = position.coords.longitude;
-            const distance = calculateDistance(
-                classroomLocation.lat,
-                classroomLocation.lng,
-                studentLat,
-                studentLng
-            );
+            const distance = calculateDistance(decoded.lat, decoded.lng, studentLat, studentLng);
 
-            if (distance > allowedRadius) {
+            if (distance > decoded.radius) {
                 return {
                     valid: false,
-                    message: `❌ You are ${Math.round(distance)}m away from the classroom. You must be within ${allowedRadius}m.`
+                    message: `❌ You are ${Math.round(distance)}m away from the classroom. Must be within ${decoded.radius}m.`
                 };
             }
 
@@ -927,7 +941,7 @@
         } catch (error) {
             return {
                 valid: false,
-                message: `❌ Cannot get your location: ${error.message}. Please enable GPS/location services.`
+                message: `❌ Cannot get your location: ${error.message}. Please enable GPS.`
             };
         }
     }
@@ -941,7 +955,20 @@
             return;
         }
 
-        currentQR = Math.floor(100000 + Math.random() * 900000).toString();
+        if (!classroomLocation) {
+            alert("❌ Please capture your GPS location first in the Location Settings above.");
+            return;
+        }
+
+        // Encode location + radius + expiry into the session code
+        // Format: BASE36(random4) + "-" + BASE36(lat*10000) + "-" + BASE36(lng*10000) + "-" + BASE36(radius)
+        const rand = Math.floor(1000 + Math.random() * 9000).toString(36).toUpperCase();
+        const latEnc = Math.round((classroomLocation.lat + 90) * 10000).toString(36).toUpperCase();
+        const lngEnc = Math.round((classroomLocation.lng + 180) * 10000).toString(36).toUpperCase();
+        const radEnc = Math.round(allowedRadius).toString(36).toUpperCase();
+        const expEnc = Math.round((Date.now() + 2 * 60 * 1000) / 1000).toString(36).toUpperCase();
+
+        currentQR = `${rand}-${latEnc}-${lngEnc}-${radEnc}-${expEnc}`;
         qrExpiry = Date.now() + 2 * 60 * 1000;
 
         const qrBox = document.getElementById("qrDisplay");
@@ -988,7 +1015,7 @@
         msg.textContent = "🔍 Verifying your location...";
         msg.className = "success";
 
-        const verification = await verifyLocation();
+        const verification = await verifyLocation(qr);
         
         if (!verification.valid) {
             msg.textContent = verification.message;
@@ -996,7 +1023,7 @@
             return;
         }
 
-        if (!currentQR || qr !== currentQR) {
+        if (!currentQR || qr.trim().toUpperCase() !== currentQR.trim().toUpperCase()) {
             msg.textContent = "Invalid or Expired Session Code";
             msg.className = "error";
             return;
@@ -1011,8 +1038,8 @@
         const record = {
             reg,
             qr,
-            subject: document.getElementById("subject").value,
-            className: document.getElementById("className").value,
+            subject: document.getElementById("subject") ? document.getElementById("subject").value : "N/A",
+            className: document.getElementById("className") ? document.getElementById("className").value : "N/A",
             time: new Date().toLocaleString()
         };
 
@@ -1020,14 +1047,11 @@
         localStorage.setItem("attendance", JSON.stringify(attendance));
 
         const currentSessionCount = attendance.filter(a => a.qr === qr).length;
-        document.getElementById("presentCount").textContent = currentSessionCount;
-
-        let successMsg = "✅ Attendance Marked Successfully!";
-        if (verification.showWiFiWarning) {
-            successMsg += ` ⚠️ Make sure you're on "${allowedWiFi}" WiFi.`;
+        if (document.getElementById("presentCount")) {
+            document.getElementById("presentCount").textContent = currentSessionCount;
         }
-        
-        msg.textContent = successMsg;
+
+        msg.textContent = "✅ Attendance Marked Successfully! " + verification.message;
         msg.className = "success";
 
         document.getElementById("regNo").value = "";
@@ -1048,7 +1072,7 @@
         msg.textContent = "🔍 Verifying location...";
         msg.className = "success";
 
-        const verification = await verifyLocation();
+        const verification = await verifyLocation(qr);
         
         if (!verification.valid) {
             msg.textContent = verification.message;
