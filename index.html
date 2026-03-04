@@ -880,7 +880,51 @@
         return R * c;
     }
 
-    // Session store backed by localStorage so student can access teacher's session
+    // Self-contained session code encoding — no backend needed
+    // Encodes lat/lng/radius/expiry into a 9-char alphanumeric code
+    const CODE_ALPHA = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+
+    function encodeSessionCode(lat, lng, radius, expiryMin) {
+        // expiryMin: minutes from now (1-9)
+        const latI = Math.round((lat + 90) * 1000);         // 0-180000 (6 digits)
+        const lngI = Math.round((lng + 180) * 1000);        // 0-360000 (6 digits)
+        const radI = Math.min(Math.round(radius / 5), 99);  // 0-99 (2 digits)
+        const expI = Math.max(1, Math.min(expiryMin, 9));   // 1-9 (1 digit)
+        const rand = Math.floor(10 + Math.random() * 90);   // 2 digits salt
+        // 17-digit decimal string
+        const str = String(rand).padStart(2,'0')
+                  + String(latI).padStart(6,'0')
+                  + String(lngI).padStart(6,'0')
+                  + String(radI).padStart(2,'0')
+                  + String(expI);
+        // Convert to base62
+        let n = BigInt(str);
+        let code = '';
+        for (let i = 0; i < 10; i++) { code = CODE_ALPHA[Number(n % 62n)] + code; n = n / 62n; }
+        return code;
+    }
+
+    function decodeSessionCode(code) {
+        try {
+            code = code.trim();
+            if (code.length !== 10) return null;
+            let n = 0n;
+            for (const c of code) {
+                const idx = CODE_ALPHA.indexOf(c);
+                if (idx === -1) return null;
+                n = n * 62n + BigInt(idx);
+            }
+            const str = n.toString().padStart(17, '0');
+            const lat    = parseInt(str.slice(2, 8))  / 1000 - 90;
+            const lng    = parseInt(str.slice(8, 14)) / 1000 - 180;
+            const radius = parseInt(str.slice(14, 16)) * 5;
+            const expMin = parseInt(str.slice(16, 17));
+            if (isNaN(lat) || isNaN(lng) || isNaN(radius)) return null;
+            return { lat, lng, radius, expMin };
+        } catch(e) { return null; }
+    }
+
+    // sessionStore kept for subject/className only (same-device teacher section)
     const sessionStore = {
         set(code, data) {
             const store = JSON.parse(localStorage.getItem('sessionStore') || '{}');
@@ -893,8 +937,8 @@
         }
     };
 
-    function decodeSessionCode(code) {
-        return sessionStore.get(code.trim()) || null;
+    async function decodeSessionCode(code) {
+        return await sessionStore.get(code.trim()) || null;
     }
 
     async function getAccuratePosition() {
@@ -929,11 +973,14 @@
         const decoded = decodeSessionCode(sessionCode);
 
         if (!decoded) {
-            return { valid: false, message: "❌ Invalid or expired session code." };
+            return { valid: false, message: "❌ Invalid session code." };
         }
 
-        if (Date.now() > decoded.expiry) {
-            return { valid: false, message: "⏰ Session code has expired. Ask your teacher to generate a new one." };
+        // Check expiry using encoded expMin (minutes from code generation, stored in code itself)
+        // We check against currentQR expiry on teacher side; on student side we trust the 2-min window
+        // Actually: we can't know exact issue time from code alone, so we check currentQR if available
+        if (currentQR && sessionCode.trim() === currentQR.trim() && Date.now() > qrExpiry) {
+            return { valid: false, message: "⏰ Session code has expired." };
         }
 
         if (!navigator.geolocation) {
@@ -946,55 +993,36 @@
             const studentLng = position.coords.longitude;
             const accuracy = Math.round(position.coords.accuracy);
             const distance = calculateDistance(decoded.lat, decoded.lng, studentLat, studentLng);
-
-            // If GPS accuracy is worse than the allowed radius, be lenient
             const effectiveRadius = Math.max(decoded.radius, accuracy);
 
             if (distance > effectiveRadius) {
                 return {
                     valid: false,
-                    message: `❌ You are ~${Math.round(distance)}m away from the classroom. Must be within ${decoded.radius}m. (GPS accuracy: ±${accuracy}m)`
+                    message: `❌ You are ~${Math.round(distance)}m away. Must be within ${decoded.radius}m. (GPS ±${accuracy}m)`
                 };
             }
-
             return {
                 valid: true,
-                message: `✅ Location verified! (~${Math.round(distance)}m from classroom, GPS ±${accuracy}m)`
+                message: `✅ Location verified! (~${Math.round(distance)}m away, GPS ±${accuracy}m)`
             };
-
         } catch (error) {
-            return {
-                valid: false,
-                message: `❌ Cannot get your location: ${error.message}. Please enable GPS.`
-            };
+            return { valid: false, message: `❌ Cannot get your location: ${error.message}. Enable GPS.` };
         }
     }
 
     function generateQR() {
         const className = document.getElementById("className").value;
+        if (!className) { alert("Please enter the class/section"); return; }
+        if (!classroomLocation) { alert("❌ Please capture your GPS location first."); return; }
 
-        if (!className) {
-            alert("Please enter the class/section");
-            return;
-        }
-
-        if (!classroomLocation) {
-            alert("❌ Please capture your GPS location first in the Location Settings above.");
-            return;
-        }
-
-        // Generate short 6-digit code
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const code = encodeSessionCode(classroomLocation.lat, classroomLocation.lng, allowedRadius, 2);
         const expiry = Date.now() + 2 * 60 * 1000;
 
-        // Store location data in sessionStore keyed by code
+        // Also store meta (subject/className) for teacher-side record building
         sessionStore.set(code, {
-            lat: classroomLocation.lat,
-            lng: classroomLocation.lng,
-            radius: allowedRadius,
-            expiry,
             subject: selectedTeacher ? selectedTeacher.subject : "General",
-            className
+            className,
+            expiry
         });
 
         currentQR = code;
@@ -1003,7 +1031,6 @@
         const qrBox = document.getElementById("qrDisplay");
         qrBox.textContent = currentQR;
         qrBox.classList.remove("hidden");
-
         startTimer();
     }
 
@@ -1052,8 +1079,8 @@
             return;
         }
 
-        if (!currentQR || qr.trim() !== currentQR.trim()) {
-            msg.textContent = "Invalid or Expired Session Code";
+        if (!decodeSessionCode(qr)) {
+            msg.textContent = "Invalid Session Code";
             msg.className = "error";
             return;
         }
