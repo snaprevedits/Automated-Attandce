@@ -552,8 +552,9 @@
         <div class="card">
             <h3>👩‍🏫 Teacher Dashboard</h3>
 
-            <label>Subject</label>
-            <input id="subject" placeholder="Enter Subject (e.g., Mathematics)">
+            <div style="background:#0d1117; border:1px solid #1e2d4a; border-radius:8px; padding:14px 16px; margin-bottom:20px; color:#94a3b8; font-size:14px;">
+                📚 <strong style="color:#3b82f6;">Subject:</strong> <span id="teacherSubjectDisplay" style="color:#e2e8f0;">—</span>
+            </div>
 
             <label>Class / Section</label>
             <input id="className" placeholder="Enter Class (e.g., CSE-A)">
@@ -721,13 +722,12 @@
     });
 
     function showPage(pageId) {
-        document.querySelectorAll('.page').forEach(page => {
-            page.classList.remove('active');
-        });
+        document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
         document.getElementById(pageId).classList.add('active');
-        
         if (pageId === 'teacherPage') {
             displayCurrentSettings();
+            const subjectEl = document.getElementById('teacherSubjectDisplay');
+            if (subjectEl) subjectEl.textContent = selectedTeacher ? selectedTeacher.subject : '—';
         }
     }
 
@@ -761,7 +761,6 @@
 
     function closeTeacherModal() {
         document.getElementById('teacherModal').style.display = 'none';
-        selectedTeacher = null;
     }
 
     function teacherLogin() {
@@ -789,11 +788,10 @@
     }
 
     function logout() {
-        if (timerInterval) {
-            clearInterval(timerInterval);
-        }
+        if (timerInterval) clearInterval(timerInterval);
         currentQR = null;
         qrExpiry = null;
+        selectedTeacher = null;
         showPage('loginPage');
     }
 
@@ -882,27 +880,46 @@
         return R * c;
     }
 
+    // Session store - holds location data keyed by short code (same browser tab shared between teacher & student)
+    const sessionStore = {};
+
     function decodeSessionCode(code) {
-        try {
-            const parts = code.trim().toUpperCase().split('-');
-            if (parts.length !== 5) return null;
-            const [rand, latEnc, lngEnc, radEnc, expEnc] = parts;
-            const lat = parseInt(latEnc, 36) / 10000 - 90;
-            const lng = parseInt(lngEnc, 36) / 10000 - 180;
-            const radius = parseInt(radEnc, 36);
-            const expiry = parseInt(expEnc, 36) * 1000;
-            if (isNaN(lat) || isNaN(lng) || isNaN(radius) || isNaN(expiry)) return null;
-            return { lat, lng, radius, expiry };
-        } catch (e) {
-            return null;
-        }
+        return sessionStore[code.trim().toUpperCase()] || null;
+    }
+
+    async function getAccuratePosition() {
+        // Take 3 readings and use the most accurate one
+        return new Promise((resolve, reject) => {
+            const results = [];
+            let attempts = 0;
+            const maxAttempts = 3;
+
+            function tryGet() {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        results.push(pos);
+                        attempts++;
+                        if (attempts < maxAttempts) {
+                            setTimeout(tryGet, 500);
+                        } else {
+                            // Pick reading with best accuracy
+                            results.sort((a, b) => a.coords.accuracy - b.coords.accuracy);
+                            resolve(results[0]);
+                        }
+                    },
+                    (err) => { attempts++; if (attempts >= maxAttempts) reject(err); else setTimeout(tryGet, 500); },
+                    { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+                );
+            }
+            tryGet();
+        });
     }
 
     async function verifyLocation(sessionCode) {
         const decoded = decodeSessionCode(sessionCode);
 
         if (!decoded) {
-            return { valid: false, message: "❌ Invalid session code format." };
+            return { valid: false, message: "❌ Invalid or expired session code." };
         }
 
         if (Date.now() > decoded.expiry) {
@@ -910,32 +927,29 @@
         }
 
         if (!navigator.geolocation) {
-            return { valid: false, message: "❌ Geolocation is not supported by your browser." };
+            return { valid: false, message: "❌ Geolocation not supported by your browser." };
         }
 
         try {
-            const position = await new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(resolve, reject, {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 0
-                });
-            });
-
+            const position = await getAccuratePosition();
             const studentLat = position.coords.latitude;
             const studentLng = position.coords.longitude;
+            const accuracy = Math.round(position.coords.accuracy);
             const distance = calculateDistance(decoded.lat, decoded.lng, studentLat, studentLng);
 
-            if (distance > decoded.radius) {
+            // If GPS accuracy is worse than the allowed radius, be lenient
+            const effectiveRadius = Math.max(decoded.radius, accuracy);
+
+            if (distance > effectiveRadius) {
                 return {
                     valid: false,
-                    message: `❌ You are ${Math.round(distance)}m away from the classroom. Must be within ${decoded.radius}m.`
+                    message: `❌ You are ~${Math.round(distance)}m away from the classroom. Must be within ${decoded.radius}m. (GPS accuracy: ±${accuracy}m)`
                 };
             }
 
             return {
                 valid: true,
-                message: `✅ Location verified! You are ${Math.round(distance)}m from the classroom.`
+                message: `✅ Location verified! (~${Math.round(distance)}m from classroom, GPS ±${accuracy}m)`
             };
 
         } catch (error) {
@@ -947,11 +961,10 @@
     }
 
     function generateQR() {
-        const subject = document.getElementById("subject").value;
         const className = document.getElementById("className").value;
 
-        if (!subject || !className) {
-            alert("Please enter both subject and class");
+        if (!className) {
+            alert("Please enter the class/section");
             return;
         }
 
@@ -960,16 +973,22 @@
             return;
         }
 
-        // Encode location + radius + expiry into the session code
-        // Format: BASE36(random4) + "-" + BASE36(lat*10000) + "-" + BASE36(lng*10000) + "-" + BASE36(radius)
-        const rand = Math.floor(1000 + Math.random() * 9000).toString(36).toUpperCase();
-        const latEnc = Math.round((classroomLocation.lat + 90) * 10000).toString(36).toUpperCase();
-        const lngEnc = Math.round((classroomLocation.lng + 180) * 10000).toString(36).toUpperCase();
-        const radEnc = Math.round(allowedRadius).toString(36).toUpperCase();
-        const expEnc = Math.round((Date.now() + 2 * 60 * 1000) / 1000).toString(36).toUpperCase();
+        // Generate short 6-digit code
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiry = Date.now() + 2 * 60 * 1000;
 
-        currentQR = `${rand}-${latEnc}-${lngEnc}-${radEnc}-${expEnc}`;
-        qrExpiry = Date.now() + 2 * 60 * 1000;
+        // Store location data in sessionStore keyed by code
+        sessionStore[code] = {
+            lat: classroomLocation.lat,
+            lng: classroomLocation.lng,
+            radius: allowedRadius,
+            expiry,
+            subject: selectedTeacher ? selectedTeacher.subject : "General",
+            className
+        };
+
+        currentQR = code;
+        qrExpiry = expiry;
 
         const qrBox = document.getElementById("qrDisplay");
         qrBox.textContent = currentQR;
@@ -1038,8 +1057,8 @@
         const record = {
             reg,
             qr,
-            subject: document.getElementById("subject") ? document.getElementById("subject").value : "N/A",
-            className: document.getElementById("className") ? document.getElementById("className").value : "N/A",
+            subject: sessionStore[qr.trim()] ? sessionStore[qr.trim()].subject : (selectedTeacher ? selectedTeacher.subject : "N/A"),
+            className: sessionStore[qr.trim()] ? sessionStore[qr.trim()].className : "N/A",
             time: new Date().toLocaleString()
         };
 
@@ -1095,7 +1114,7 @@
         const record = {
             reg,
             qr,
-            subject: document.getElementById("subject").value,
+            subject: selectedTeacher ? selectedTeacher.subject : "N/A",
             className: document.getElementById("className").value,
             time: new Date().toLocaleString()
         };
@@ -1106,12 +1125,7 @@
         const currentSessionCount = attendance.filter(a => a.qr === qr).length;
         document.getElementById("presentCount").textContent = currentSessionCount;
 
-        let successMsg = "✅ Attendance Marked Successfully!";
-        if (verification.showWiFiWarning) {
-            successMsg += ` ⚠️ Ensure student is on "${allowedWiFi}" WiFi.`;
-        }
-
-        msg.textContent = successMsg;
+        msg.textContent = "✅ Attendance Marked Successfully!";
         msg.className = "success";
 
         document.getElementById("regNoTeacher").value = "";
