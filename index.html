@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Attendance System</title>
+    <title>QR Attendance System</title>
     
 
     <style>
@@ -388,7 +388,79 @@
             border-radius: 8px;
         }
 
+        .dept-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .dept-tab {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            background: #0d1117;
+            color: #94a3b8;
+            border: 1px solid #1e2d4a;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 0;
+            width: auto;
+            transition: all 0.2s ease;
+        }
+
+        .dept-tab.active, .dept-tab:hover {
+            background: #1d4ed8;
+            color: white;
+            border-color: #3b82f6;
+            transform: none;
+            box-shadow: 0 4px 12px rgba(29, 78, 216, 0.3);
+        }
+
+        .teacher-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .teacher-card {
+            background: #0d1117;
+            border: 1px solid #1e2d4a;
+            border-radius: 12px;
+            padding: 20px 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .teacher-card:hover {
+            border-color: #3b82f6;
+            background: #141d2e;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.2);
+        }
+
+        .teacher-avatar {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+
+        .teacher-name {
+            font-weight: 700;
+            color: #e2e8f0;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .teacher-subject {
+            font-size: 12px;
+            color: #64748b;
+        }
+
         @media (max-width: 768px) {
+            .teacher-grid { grid-template-columns: repeat(2, 1fr); }
+            .dept-tabs { flex-wrap: wrap; }
+        }
             .container {
                 padding: 0 15px;
                 margin: 20px auto;
@@ -418,36 +490,55 @@
 
     <!-- LOGIN PAGE -->
     <div id="loginPage" class="page active">
+
+        <!-- Department + Teacher Selection -->
+        <div id="deptSelectionCard" class="card">
+            <h3>🏫 Select Department & Teacher</h3>
+
+            <div class="dept-tabs">
+                <button class="dept-tab active" onclick="selectDept('cse')">💻 CSE</button>
+                <button class="dept-tab" onclick="selectDept('cyber')">🔐 Cyber</button>
+                <button class="dept-tab" onclick="selectDept('ece')">📡 ECE</button>
+            </div>
+
+            <div id="teacherGrid" class="teacher-grid"></div>
+        </div>
+
+        <!-- Admin Login -->
         <div class="card">
-            <h3>🔐 Teacher / Admin Login</h3>
-
-            <label>Select Role</label>
-            <select id="role">
-                <option value="teacher">👩‍🏫 Teacher</option>
-                <option value="admin">🧑‍💼 Admin</option>
-            </select>
-
+            <h3>🧑‍💼 Admin Login</h3>
             <label>Password</label>
-            <input type="password" id="password" placeholder="Enter Password">
-            <button id="loginBtn">Login</button>
+            <input type="password" id="adminPassword" placeholder="Enter Admin Password">
+            <button id="adminLoginBtn">Login as Admin</button>
             <p id="loginMsg"></p>
+        </div>
 
+        <div style="text-align:center; margin-top: -10px;">
             <button class="btn-link" id="studentLinkBtn">👨‍🎓 Student? Mark Attendance Here</button>
+        </div>
+    </div>
+
+    <!-- TEACHER PASSWORD MODAL -->
+    <div id="teacherModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:9999; justify-content:center; align-items:center;">
+        <div class="card" style="width:360px; margin:0;">
+            <h3 id="modalTeacherName">🔐 Teacher Login</h3>
+            <label>Password</label>
+            <input type="password" id="teacherPassword" placeholder="Enter Password">
+            <button id="teacherLoginBtn">Login</button>
+            <p id="teacherLoginMsg"></p>
+            <button class="btn-link" onclick="closeTeacherModal()" style="margin-top:10px;">✕ Cancel</button>
         </div>
     </div>
 
     <!-- TEACHER PAGE -->
     <div id="teacherPage" class="page">
         <div class="card">
-            <h3>📍 Location & WiFi Settings</h3>
+            <h3>📍 GPS Location Settings</h3>
 
-            <label>Allowed WiFi Network Name (SSID)</label>
-            <input id="wifiName" placeholder="e.g., ClassRoom_WiFi_5G" value="">
-
-            <label>GPS Radius (meters)</label>
+            <label>Allowed Radius (meters)</label>
             <input id="gpsRadius" type="number" placeholder="e.g., 50" value="50">
 
-            <button id="setLocationBtn">📍 Set Current Location as Classroom</button>
+            <button id="setLocationBtn">📍 Capture My Current Location</button>
             <button id="saveSettingsBtn" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">💾 Save Settings</button>
 
             <p id="locationMsg"></p>
@@ -555,8 +646,37 @@
 
 
 <script>
-    const TEACHER_PASS = "teacher123";
     const ADMIN_PASS = "admin123";
+
+    const DEPARTMENTS = {
+        cse: {
+            name: "CSE", icon: "💻",
+            teachers: [
+                { name: "Dr. Arun Kumar",    subject: "Data Structures",   pass: "arun123",   avatar: "👨‍🏫" },
+                { name: "Prof. Meena Devi",  subject: "Operating Systems", pass: "meena123",  avatar: "👩‍🏫" },
+                { name: "Dr. Ravi Shankar",  subject: "Networks",          pass: "ravi123",   avatar: "👨‍💻" }
+            ]
+        },
+        cyber: {
+            name: "Cyber", icon: "🔐",
+            teachers: [
+                { name: "Robin",         subject: "Ethical Hacking", pass: "robin123",     avatar: "👨‍💻" },
+                { name: "Vidyalakshmi", subject: "AIML",            pass: "vidya123",     avatar: "👩‍🔬" },
+                { name: "Senthil",       subject: "AJP",             pass: "senthil123",   avatar: "👨‍🏫" }
+            ]
+        },
+        ece: {
+            name: "ECE", icon: "📡",
+            teachers: [
+                { name: "Dr. Suresh Babu",   subject: "VLSI Design",       pass: "suresh123", avatar: "👨‍🔧" },
+                { name: "Prof. Kavitha M",   subject: "Signal Processing",  pass: "kavitha123",avatar: "👩‍🔧" },
+                { name: "Dr. Ramesh Iyer",   subject: "Embedded Systems",  pass: "ramesh123", avatar: "🧑‍🏫" }
+            ]
+        }
+    };
+
+    let currentDept = 'cse';
+    let selectedTeacher = null;
 
     let currentQR = null;
     let qrExpiry = null;
@@ -564,7 +684,6 @@
     
     // GPS and WiFi settings
     let classroomLocation = JSON.parse(localStorage.getItem("classroomLocation")) || null;
-    let allowedWiFi = localStorage.getItem("allowedWiFi") || null;
     let allowedRadius = parseFloat(localStorage.getItem("allowedRadius")) || 50;
 
     let attendance = JSON.parse(localStorage.getItem("attendance")) || [];
@@ -572,9 +691,16 @@
     // Initialize event listeners when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
         // Login page
-        document.getElementById('loginBtn').addEventListener('click', login);
+        document.getElementById('adminLoginBtn').addEventListener('click', adminLogin);
         document.getElementById('studentLinkBtn').addEventListener('click', () => showPage('studentPage'));
-        
+        document.getElementById('teacherLoginBtn').addEventListener('click', teacherLogin);
+        document.getElementById('teacherPassword').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') teacherLogin();
+        });
+        document.getElementById('adminPassword').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') adminLogin();
+        });
+
         // Teacher page
         document.getElementById('setLocationBtn').addEventListener('click', setCurrentLocation);
         document.getElementById('saveSettingsBtn').addEventListener('click', saveLocationSettings);
@@ -589,11 +715,9 @@
         // Student page
         document.getElementById('markAttendanceBtn').addEventListener('click', markAttendance);
         document.getElementById('backToLoginBtn').addEventListener('click', () => showPage('loginPage'));
-        
-        // Enter key for password
-        document.getElementById('password').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') login();
-        });
+
+        // Render initial department
+        renderTeachers('cse');
     });
 
     function showPage(pageId) {
@@ -607,18 +731,59 @@
         }
     }
 
-    function login() {
-        const role = document.getElementById("role").value;
-        const pass = document.getElementById("password").value;
-        const msg = document.getElementById("loginMsg");
+    function selectDept(dept) {
+        currentDept = dept;
+        document.querySelectorAll('.dept-tab').forEach(t => t.classList.remove('active'));
+        event.target.classList.add('active');
+        renderTeachers(dept);
+    }
 
-        if (role === "teacher" && pass === TEACHER_PASS) {
+    function renderTeachers(dept) {
+        const grid = document.getElementById('teacherGrid');
+        const teachers = DEPARTMENTS[dept].teachers;
+        grid.innerHTML = teachers.map((t, i) => `
+            <div class="teacher-card" onclick="openTeacherModal(${i})">
+                <div class="teacher-avatar">${t.avatar}</div>
+                <div class="teacher-name">${t.name}</div>
+                <div class="teacher-subject">${t.subject}</div>
+            </div>
+        `).join('');
+    }
+
+    function openTeacherModal(index) {
+        selectedTeacher = DEPARTMENTS[currentDept].teachers[index];
+        document.getElementById('modalTeacherName').textContent = `🔐 Login as ${selectedTeacher.name}`;
+        document.getElementById('teacherPassword').value = '';
+        document.getElementById('teacherLoginMsg').textContent = '';
+        document.getElementById('teacherModal').style.display = 'flex';
+        setTimeout(() => document.getElementById('teacherPassword').focus(), 100);
+    }
+
+    function closeTeacherModal() {
+        document.getElementById('teacherModal').style.display = 'none';
+        selectedTeacher = null;
+    }
+
+    function teacherLogin() {
+        const pass = document.getElementById('teacherPassword').value;
+        const msg = document.getElementById('teacherLoginMsg');
+        if (pass === selectedTeacher.pass) {
+            closeTeacherModal();
             showPage('teacherPage');
-        } else if (role === "admin" && pass === ADMIN_PASS) {
+        } else {
+            msg.textContent = 'Invalid Password';
+            msg.className = 'error';
+        }
+    }
+
+    function adminLogin() {
+        const pass = document.getElementById("adminPassword").value;
+        const msg = document.getElementById("loginMsg");
+        if (pass === ADMIN_PASS) {
             showPage('adminPage');
             loadTable();
         } else {
-            msg.textContent = "Invalid Credentials";
+            msg.textContent = "Invalid Admin Password";
             msg.className = "error";
         }
     }
@@ -661,18 +826,11 @@
     }
 
     function saveLocationSettings() {
-        const wifiName = document.getElementById("wifiName").value;
         const radius = parseFloat(document.getElementById("gpsRadius").value);
         const msg = document.getElementById("locationMsg");
 
-        if (!wifiName) {
-            msg.textContent = "❌ Please enter WiFi network name";
-            msg.className = "error";
-            return;
-        }
-
         if (!classroomLocation) {
-            msg.textContent = "❌ Please set classroom location first";
+            msg.textContent = "❌ Please capture your location first";
             msg.className = "error";
             return;
         }
@@ -683,34 +841,29 @@
             return;
         }
 
-        allowedWiFi = wifiName;
         allowedRadius = radius;
-
         localStorage.setItem("classroomLocation", JSON.stringify(classroomLocation));
-        localStorage.setItem("allowedWiFi", allowedWiFi);
         localStorage.setItem("allowedRadius", allowedRadius.toString());
 
-        msg.textContent = "✅ Location and WiFi settings saved successfully!";
+        msg.textContent = "✅ GPS location saved! Students must be within " + allowedRadius + "m to mark attendance.";
         msg.className = "success";
-        
+
         displayCurrentSettings();
     }
 
     function displayCurrentSettings() {
         const display = document.getElementById("settingsDisplay");
-        const wifiInput = document.getElementById("wifiName");
         const radiusInput = document.getElementById("gpsRadius");
 
-        if (classroomLocation && allowedWiFi) {
+        if (classroomLocation) {
             display.innerHTML = `
-                📍 <strong>Location:</strong> Lat ${classroomLocation.lat.toFixed(6)}, Lng ${classroomLocation.lng.toFixed(6)}<br>
-                📶 <strong>WiFi:</strong> ${allowedWiFi}<br>
-                📏 <strong>Radius:</strong> ${allowedRadius} meters
+                📍 <strong>Latitude:</strong> ${classroomLocation.lat.toFixed(6)}<br>
+                📍 <strong>Longitude:</strong> ${classroomLocation.lng.toFixed(6)}<br>
+                📏 <strong>Allowed Radius:</strong> ${allowedRadius} meters
             `;
-            wifiInput.value = allowedWiFi;
             radiusInput.value = allowedRadius;
         } else {
-            display.textContent = "No location configured yet. Please set up location and WiFi settings.";
+            display.textContent = "No location captured yet. Click 'Capture My Current Location'.";
         }
     }
 
@@ -729,12 +882,16 @@
         return R * c;
     }
 
-    async function verifyLocationAndWiFi() {
-        if (!classroomLocation || !allowedWiFi) {
+    async function verifyLocation() {
+        if (!classroomLocation) {
             return {
                 valid: false,
-                message: "⚠️ Classroom location and WiFi not configured by teacher. Please contact your teacher."
+                message: "⚠️ Teacher has not set classroom location yet. Please ask your teacher to configure GPS settings."
             };
+        }
+
+        if (!navigator.geolocation) {
+            return { valid: false, message: "❌ Geolocation is not supported by your browser." };
         }
 
         try {
@@ -746,32 +903,31 @@
                 });
             });
 
-            const currentLat = position.coords.latitude;
-            const currentLng = position.coords.longitude;
+            const studentLat = position.coords.latitude;
+            const studentLng = position.coords.longitude;
             const distance = calculateDistance(
                 classroomLocation.lat,
                 classroomLocation.lng,
-                currentLat,
-                currentLng
+                studentLat,
+                studentLng
             );
 
             if (distance > allowedRadius) {
                 return {
                     valid: false,
-                    message: `❌ You are ${Math.round(distance)}m away from classroom. You must be within ${allowedRadius}m radius.`
+                    message: `❌ You are ${Math.round(distance)}m away from the classroom. You must be within ${allowedRadius}m.`
                 };
             }
 
             return {
                 valid: true,
-                message: `✅ Location verified! Please ensure you're connected to "${allowedWiFi}" WiFi network.`,
-                showWiFiWarning: true
+                message: `✅ Location verified! You are ${Math.round(distance)}m from the classroom.`
             };
 
         } catch (error) {
             return {
                 valid: false,
-                message: `❌ Cannot verify location: ${error.message}. Please enable location services.`
+                message: `❌ Cannot get your location: ${error.message}. Please enable GPS/location services.`
             };
         }
     }
@@ -785,7 +941,7 @@
             return;
         }
 
-        currentQR = "QR-" + Math.floor(Math.random() * 100000);
+        currentQR = Math.floor(100000 + Math.random() * 900000).toString();
         qrExpiry = Date.now() + 2 * 60 * 1000;
 
         const qrBox = document.getElementById("qrDisplay");
@@ -832,7 +988,7 @@
         msg.textContent = "🔍 Verifying your location...";
         msg.className = "success";
 
-        const verification = await verifyLocationAndWiFi();
+        const verification = await verifyLocation();
         
         if (!verification.valid) {
             msg.textContent = verification.message;
@@ -892,7 +1048,7 @@
         msg.textContent = "🔍 Verifying location...";
         msg.className = "success";
 
-        const verification = await verifyLocationAndWiFi();
+        const verification = await verifyLocation();
         
         if (!verification.valid) {
             msg.textContent = verification.message;
