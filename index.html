@@ -105,6 +105,11 @@
             transition: background 0.3s;
         }
 
+        header a:hover {
+            opacity: 0.8;
+            text-decoration: underline;
+        }
+
         /* Theme toggle button */
         #themeToggle {
             position: absolute;
@@ -437,6 +442,55 @@
             color: var(--text-sub);
         }
 
+        .subject-card {
+            background: var(--box-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .subject-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s;
+        }
+
+        .subject-card-header:hover { background: var(--teacher-hover); }
+
+        .subject-card-header .subj-info { display: flex; align-items: center; gap: 12px; }
+        .subject-card-header .subj-name { font-weight: 700; color: var(--text); font-size: 15px; }
+        .subject-card-header .subj-teacher { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+
+        .subject-badge {
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .badge-active { background: rgba(59,130,246,0.15); color: #3b82f6; border: 1px solid #3b82f6; }
+        .badge-none   { background: var(--error-bg); color: var(--error-text); border: 1px solid currentColor; }
+
+        .subject-card-body {
+            display: none;
+            border-top: 1px solid var(--card-border);
+        }
+
+        .subject-card-body.open { display: block; }
+
+        .no-attendance-msg {
+            padding: 24px;
+            text-align: center;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
         @media (max-width: 768px) {
             .teacher-grid { grid-template-columns: repeat(2, 1fr); }
             .dept-tabs { flex-wrap: wrap; }
@@ -453,7 +507,7 @@
 
 <header>
     <button id="adminAccessBtn" onclick="showAdminModal()" style="position:absolute; left:20px; background:rgba(59,130,246,0.15); border:1px solid #3b82f6; color:#3b82f6; border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer; width:auto; margin:0; transition:all 0.2s;">🧑‍💼 Admin</button>
-    🎓 Automated Attendance System
+    <a onclick="goHome()" style="cursor:pointer; text-decoration:none; color:inherit;">🎓 Automated Attendance System</a>
     <button id="themeToggle" onclick="toggleTheme()">🌙 Dark</button>
 </header>
 
@@ -566,31 +620,19 @@
     <!-- ADMIN PAGE -->
     <div id="adminPage" class="page">
         <div class="card">
-            <h3>🧑‍💼 Admin Dashboard - Attendance Records</h3>
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:20px;">
+                <h3 style="margin:0; border:none; padding:0;">🧑‍💼 Admin Dashboard</h3>
+                <button id="exportBtn" style="width:auto; margin:0; background:linear-gradient(135deg,#059669 0%,#047857 100%);">📥 Export CSV</button>
+            </div>
 
-            <button id="exportBtn" style="width: auto; margin-bottom: 20px; background: linear-gradient(135deg, #059669 0%, #047857 100%);">📥 Export to Excel</button>
+            <!-- Department tabs -->
+            <div class="dept-tabs" id="adminDeptTabs">
+                <button class="dept-tab active" onclick="adminSelectDept('cse', this)">💻 CSE</button>
+                <button class="dept-tab" onclick="adminSelectDept('cyber', this)">🔐 Cyber</button>
+                <button class="dept-tab" onclick="adminSelectDept('ece', this)">📡 ECE</button>
+            </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>Register No</th>
-                        <th>Subject</th>
-                        <th>Class</th>
-                        <th>Date & Time</th>
-                    </tr>
-                </thead>
-                <tbody id="attendanceTable"></tbody>
-            </table>
-        </div>
-
-        <div class="card">
-            <h3>📊 Subject-wise Attendance Analysis</h3>
-            <div id="subjectAnalysis"></div>
-        </div>
-
-        <div class="card">
-            <h3>⚠️ Students Below 75% Attendance</h3>
-            <div id="lowAttendance"></div>
+            <div id="adminSubjectCards"></div>
         </div>
 
         <div class="card">
@@ -635,9 +677,9 @@
         cyber: {
             name: "Cyber", icon: "🔐",
             teachers: [
-                { name: "Prof.Robin",         subject: "Ethical Hacking", pass: "robin123",     avatar: "👨‍💻" },
-                { name: "Prof.Vidyalakshmi", subject: "AIML",            pass: "vidya123",     avatar: "👩‍🔬" },
-                { name: "Prof.Senthil",       subject: "AJP",             pass: "senthil123",   avatar: "👨‍🏫" }
+                { name: "Prof. Robin",         subject: "Ethical Hacking", pass: "robin123",     avatar: "👨‍💻" },
+                { name: "Prof. Vidyalakshmi",  subject: "AIML",            pass: "vidya123",     avatar: "👩‍🔬" },
+                { name: "Prof. Senthil",        subject: "AJP",             pass: "senthil123",   avatar: "👨‍🏫" }
             ]
         },
         ece: {
@@ -724,6 +766,15 @@
         // Render initial department
         renderTeachers('cse');
     });
+
+    function goHome() {
+        if (timerInterval) clearInterval(timerInterval);
+        currentQR = null;
+        qrExpiry = null;
+        selectedTeacher = null;
+        showPage('loginPage');
+        renderTeachers(currentDept);
+    }
 
     function toggleTheme() {
         const isLight = document.body.classList.toggle('light');
@@ -1210,87 +1261,106 @@
         }
     }
 
+    let allAttendance = [];
+    let currentAdminDept = 'cse';
+
     async function loadTable() {
-        const tbody = document.getElementById("attendanceTable");
-        tbody.innerHTML = '<tr><td colspan="4" style="padding:20px;color:#64748b;">Loading...</td></tr>';
-
-        const attendance = await dbGet("attendance");
-        attendanceCache = attendance;
-
-        if (!attendance.length) {
-            tbody.innerHTML = '<tr><td colspan="4" style="padding:30px;color:#9ca3af;">No attendance records found</td></tr>';
-            loadSubjectAnalysis([]);
-            loadLowAttendance([]);
-            return;
-        }
-
-        tbody.innerHTML = attendance.map(a => `<tr>
-            <td style="font-weight:600;color:#3b82f6;">${a.reg}</td>
-            <td>${a.subject}</td>
-            <td>${a.className}</td>
-            <td style="font-size:13px;color:#6b7280;">${a.time}</td>
-        </tr>`).join('');
-
-        loadSubjectAnalysis(attendance);
-        loadLowAttendance(attendance);
+        const container = document.getElementById("adminSubjectCards");
+        container.innerHTML = '<p style="color:var(--text-muted);padding:20px;">Loading...</p>';
+        allAttendance = await dbGet("attendance");
+        attendanceCache = allAttendance;
+        renderAdminDept(currentAdminDept);
     }
 
-    function loadSubjectAnalysis(attendance) {
-        const analysisDiv = document.getElementById("subjectAnalysis");
-        const subjectStats = {};
-        attendance.forEach(r => {
-            if (!subjectStats[r.subject]) subjectStats[r.subject] = new Set();
-            subjectStats[r.subject].add(r.reg);
-        });
-        const totalStudents = new Set(attendance.map(a => a.reg)).size || 1;
-        let html = Object.keys(subjectStats).map(subject => {
-            const attended = subjectStats[subject].size;
-            const pct = ((attended / totalStudents) * 100).toFixed(1);
-            const low = pct < 75;
-            return `<div class="analysis-item ${low?'low':''}">
-                <div><strong>${subject}</strong>
-                <div style="font-size:13px;color:#6b7280;margin-top:5px;">${attended} / ${totalStudents} students</div></div>
-                <div class="percentage ${low?'low':''}">${pct}%</div>
-            </div>`;
-        }).join('');
-        analysisDiv.innerHTML = html || '<p style="color:#9ca3af;text-align:center;padding:20px;">No data</p>';
+    function adminSelectDept(dept, btn) {
+        currentAdminDept = dept;
+        document.querySelectorAll('#adminDeptTabs .dept-tab').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        renderAdminDept(dept);
     }
 
-    function loadLowAttendance(attendance) {
-        const lowDiv = document.getElementById("lowAttendance");
-        const studentStats = {}, sessionsBySubject = {};
-        attendance.forEach(r => {
-            if (!studentStats[r.reg]) studentStats[r.reg] = {};
-            studentStats[r.reg][r.subject] = (studentStats[r.reg][r.subject] || 0) + 1;
-            if (!sessionsBySubject[r.subject]) sessionsBySubject[r.subject] = new Set();
-            sessionsBySubject[r.subject].add(r.qr);
-        });
-        let html = '', hasLow = false;
-        Object.keys(studentStats).forEach(reg => {
-            Object.keys(studentStats[reg]).forEach(subject => {
-                const attended = studentStats[reg][subject];
-                const total = sessionsBySubject[subject].size;
-                const pct = ((attended / total) * 100).toFixed(1);
-                if (pct < 75) {
-                    hasLow = true;
-                    html += `<div class="student-item">
-                        <div><strong>${reg}</strong>
-                        <div style="font-size:13px;color:#f87171;margin-top:5px;">${subject} | ${attended}/${total} classes</div></div>
-                        <div class="percentage low">${pct}%</div>
-                    </div>`;
-                }
+    function renderAdminDept(dept) {
+        const container = document.getElementById("adminSubjectCards");
+        const teachers = DEPARTMENTS[dept].teachers;
+        container.innerHTML = '';
+
+        teachers.forEach(teacher => {
+            const records = allAttendance.filter(a => a.subject === teacher.subject);
+            const hasData = records.length > 0;
+
+            // Group by session (qr code)
+            const sessions = {};
+            records.forEach(r => {
+                if (!sessions[r.qr]) sessions[r.qr] = { time: r.time, students: [] };
+                sessions[r.qr].students.push(r);
             });
+            const sessionList = Object.entries(sessions);
+
+            const cardId = `subj-${dept}-${teacher.subject.replace(/\s+/g,'_')}`;
+
+            const card = document.createElement('div');
+            card.className = 'subject-card';
+            card.innerHTML = `
+                <div class="subject-card-header" onclick="toggleSubjectCard('${cardId}')">
+                    <div class="subj-info">
+                        <div style="font-size:28px;">${teacher.avatar}</div>
+                        <div>
+                            <div class="subj-name">📚 ${teacher.subject}</div>
+                            <div class="subj-teacher">👤 ${teacher.name}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        ${hasData
+                            ? `<span class="subject-badge badge-active">✅ ${records.length} records</span>`
+                            : `<span class="subject-badge badge-none">⚠️ No attendance taken</span>`
+                        }
+                        <span id="arrow-${cardId}" style="color:var(--text-muted);font-size:18px;">▸</span>
+                    </div>
+                </div>
+                <div class="subject-card-body" id="${cardId}">
+                    ${hasData ? buildSubjectTable(sessionList, teacher.subject) : `<div class="no-attendance-msg">No attendance has been taken for <strong>${teacher.subject}</strong> yet.</div>`}
+                </div>`;
+            container.appendChild(card);
         });
-        lowDiv.innerHTML = hasLow ? html : '<p style="color:#34d399;text-align:center;padding:20px;background:#0a1f14;border-radius:8px;">✔ All students above 75%</p>';
+    }
+
+    function buildSubjectTable(sessionList, subject) {
+        if (!sessionList.length) return '<div class="no-attendance-msg">No records.</div>';
+        return sessionList.map(([qr, session], idx) => `
+            <div style="padding:16px 20px; border-bottom:1px solid var(--card-border);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+                    <div>
+                        <strong style="color:#3b82f6;">Session ${idx + 1}</strong>
+                        <span style="font-size:12px;color:var(--text-sub);margin-left:10px;">🕒 ${session.time}</span>
+                    </div>
+                    <span style="font-size:13px;color:var(--text-muted);">👥 ${session.students.length} student${session.students.length !== 1 ? 's' : ''}</span>
+                </div>
+                <table style="margin-top:0;">
+                    <thead><tr><th>Register No</th><th>Class</th><th>Time</th></tr></thead>
+                    <tbody>
+                        ${session.students.map(s => `
+                            <tr>
+                                <td style="font-weight:600;color:#3b82f6;">${s.reg}</td>
+                                <td>${s.className || '—'}</td>
+                                <td style="font-size:12px;color:var(--text-sub);">${s.time}</td>
+                            </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>`).join('');
+    }
+
+    function toggleSubjectCard(id) {
+        const body = document.getElementById(id);
+        const arrow = document.getElementById('arrow-' + id);
+        body.classList.toggle('open');
+        arrow.textContent = body.classList.contains('open') ? '▾' : '▸';
     }
 
     async function exportToExcel() {
-        const attendance = await dbGet("attendance");
+        const attendance = allAttendance.length ? allAttendance : await dbGet("attendance");
         if (!attendance.length) { alert("No attendance data to export"); return; }
-
         let csv = "Register No,Subject,Class,Date & Time\n";
         attendance.forEach(r => { csv += `${r.reg},${r.subject},${r.className},${r.time}\n`; });
-
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
