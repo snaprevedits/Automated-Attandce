@@ -683,11 +683,41 @@
     let qrExpiry = null;
     let timerInterval = null;
     
-    // GPS and WiFi settings
+    // GPS settings (teacher-local only)
     let classroomLocation = JSON.parse(localStorage.getItem("classroomLocation")) || null;
     let allowedRadius = parseFloat(localStorage.getItem("allowedRadius")) || 50;
 
-    let attendance = JSON.parse(localStorage.getItem("attendance")) || [];
+    /*
+     * SETUP: Create a free Firebase project at https://console.firebase.google.com
+     * 1. New project → Realtime Database → Start in test mode
+     * 2. Copy your database URL below (looks like: https://YOUR-APP-default-rtdb.firebaseio.com)
+     * Test mode allows public read/write for 30 days (renewable)
+     */
+    const FB_URL = "https://automated-c02f2-default-rtdb.firebaseio.com";
+
+    async function dbPush(path, data) {
+        try {
+            const res = await fetch(`${FB_URL}/${path}.json`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            return res.ok;
+        } catch(e) { console.error("dbPush:", e); return false; }
+    }
+
+    async function dbGet(path) {
+        try {
+            const res = await fetch(`${FB_URL}/${path}.json`);
+            if (!res.ok) return [];
+            const val = await res.json();
+            if (!val) return [];
+            return typeof val === 'object' && !Array.isArray(val) ? Object.values(val) : val;
+        } catch(e) { return []; }
+    }
+
+    // Local cache for duplicate check
+    let attendanceCache = [];
 
     // Initialize event listeners when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
@@ -1058,8 +1088,8 @@
     }
 
     async function markAttendance() {
-        const reg = document.getElementById("regNo").value;
-        const qr = document.getElementById("qrInput").value;
+        const reg = document.getElementById("regNo").value.trim();
+        const qr = document.getElementById("qrInput").value.trim();
         const msg = document.getElementById("studentMsg");
 
         if (!reg || !qr) {
@@ -1068,56 +1098,66 @@
             return;
         }
 
-        msg.textContent = "🔍 Verifying your location...";
-        msg.className = "success";
+        const decoded = decodeSessionCode(qr);
+        if (!decoded) {
+            msg.textContent = "❌ Invalid session code. Please check and try again.";
+            msg.className = "error";
+            return;
+        }
 
+        // Check duplicate using Firebase
+        msg.textContent = "🔍 Checking for duplicates...";
+        msg.className = "success";
+        try {
+            const existing = await dbGet("attendance");
+            if (existing.some(a => a.reg === reg && a.qr === qr)) {
+                msg.textContent = "Attendance already marked for this session.";
+                msg.className = "error";
+                return;
+            }
+        } catch(e) { /* continue if offline check fails */ }
+
+        msg.textContent = "📍 Verifying your location...";
         const verification = await verifyLocation(qr);
-        
         if (!verification.valid) {
             msg.textContent = verification.message;
             msg.className = "error";
             return;
         }
 
-        if (!decodeSessionCode(qr)) {
-            msg.textContent = "Invalid Session Code";
-            msg.className = "error";
-            return;
-        }
-
-        if (attendance.some(a => a.reg === reg && a.qr === qr)) {
-            msg.textContent = "Attendance Already Marked for this session";
-            msg.className = "error";
-            return;
-        }
-
-        const session = sessionStore.get(qr.trim());
+        // Get subject/className from session meta (if on same device) or use decoded info
+        const session = sessionStore.get(qr);
         const record = {
             reg,
             qr,
-            subject: session ? session.subject : (selectedTeacher ? selectedTeacher.subject : "N/A"),
-            className: session ? session.className : "N/A",
+            subject: session ? session.subject : decoded.subject || "N/A",
+            className: session ? session.className : decoded.className || "N/A",
             time: new Date().toLocaleString()
         };
 
-        attendance.push(record);
-        localStorage.setItem("attendance", JSON.stringify(attendance));
+        msg.textContent = "💾 Saving attendance...";
+        const saved = await dbPush("attendance", record);
 
-        const currentSessionCount = attendance.filter(a => a.qr === qr).length;
-        if (document.getElementById("presentCount")) {
-            document.getElementById("presentCount").textContent = currentSessionCount;
+        if (saved) {
+            msg.textContent = "✅ Attendance Marked! " + verification.message;
+            msg.className = "success";
+            document.getElementById("regNo").value = "";
+            document.getElementById("qrInput").value = "";
+            // Update present count if teacher is on same device
+            if (document.getElementById("presentCount")) {
+                attendanceCache.push(record);
+                const count = attendanceCache.filter(a => a.qr === qr).length;
+                document.getElementById("presentCount").textContent = count;
+            }
+        } else {
+            msg.textContent = "❌ Failed to save. Check internet connection.";
+            msg.className = "error";
         }
-
-        msg.textContent = "✅ Attendance Marked Successfully! " + verification.message;
-        msg.className = "success";
-
-        document.getElementById("regNo").value = "";
-        document.getElementById("qrInput").value = "";
     }
 
     async function markAttendanceTeacher() {
-        const reg = document.getElementById("regNoTeacher").value;
-        const qr = document.getElementById("qrInputTeacher").value;
+        const reg = document.getElementById("regNoTeacher").value.trim();
+        const qr = document.getElementById("qrInputTeacher").value.trim();
         const msg = document.getElementById("studentMsgTeacher");
 
         if (!reg || !qr) {
@@ -1126,28 +1166,22 @@
             return;
         }
 
-        msg.textContent = "🔍 Verifying location...";
+        if (!currentQR || qr !== currentQR) {
+            msg.textContent = "❌ Code doesn't match the active session.";
+            msg.className = "error";
+            return;
+        }
+
+        msg.textContent = "🔍 Checking duplicate...";
         msg.className = "success";
-
-        const verification = await verifyLocation(qr);
-        
-        if (!verification.valid) {
-            msg.textContent = verification.message;
-            msg.className = "error";
-            return;
-        }
-
-        if (!currentQR || qr.trim() !== currentQR.trim()) {
-            msg.textContent = "Invalid or Expired Session Code";
-            msg.className = "error";
-            return;
-        }
-
-        if (attendance.some(a => a.reg === reg && a.qr === qr)) {
-            msg.textContent = "Attendance Already Marked for this session";
-            msg.className = "error";
-            return;
-        }
+        try {
+            const existing = await dbGet("attendance");
+            if (existing.some(a => a.reg === reg && a.qr === qr)) {
+                msg.textContent = "Attendance already marked for this session.";
+                msg.className = "error";
+                return;
+            }
+        } catch(e) {}
 
         const record = {
             reg,
@@ -1157,203 +1191,109 @@
             time: new Date().toLocaleString()
         };
 
-        attendance.push(record);
-        localStorage.setItem("attendance", JSON.stringify(attendance));
+        msg.textContent = "💾 Saving...";
+        const saved = await dbPush("attendance", record);
 
-        const currentSessionCount = attendance.filter(a => a.qr === qr).length;
-        document.getElementById("presentCount").textContent = currentSessionCount;
-
-        msg.textContent = "✅ Attendance Marked Successfully!";
-        msg.className = "success";
-
-        document.getElementById("regNoTeacher").value = "";
-        document.getElementById("qrInputTeacher").value = "";
+        if (saved) {
+            attendanceCache.push(record);
+            const count = attendanceCache.filter(a => a.qr === qr).length;
+            document.getElementById("presentCount").textContent = count;
+            msg.textContent = "✅ Attendance Marked Successfully!";
+            msg.className = "success";
+            document.getElementById("regNoTeacher").value = "";
+            document.getElementById("qrInputTeacher").value = "";
+        } else {
+            msg.textContent = "❌ Failed to save. Check internet.";
+            msg.className = "error";
+        }
     }
 
-    function loadTable() {
+    async function loadTable() {
         const tbody = document.getElementById("attendanceTable");
-        tbody.innerHTML = "";
+        tbody.innerHTML = '<tr><td colspan="4" style="padding:20px;color:#64748b;">Loading...</td></tr>';
 
-        if (attendance.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="padding: 30px; color: #9ca3af;">No attendance records found</td></tr>';
+        const attendance = await dbGet("attendance");
+        attendanceCache = attendance;
+
+        if (!attendance.length) {
+            tbody.innerHTML = '<tr><td colspan="4" style="padding:30px;color:#9ca3af;">No attendance records found</td></tr>';
+            loadSubjectAnalysis([]);
+            loadLowAttendance([]);
             return;
         }
 
-        attendance.forEach(a => {
-            const row = `<tr>
-                <td style="font-weight: 600; color: #3b82f6;">${a.reg}</td>
-                <td>${a.subject}</td>
-                <td>${a.className}</td>
-                <td style="font-size: 13px; color: #6b7280;">${a.time}</td>
-            </tr>`;
-            tbody.innerHTML += row;
-        });
+        tbody.innerHTML = attendance.map(a => `<tr>
+            <td style="font-weight:600;color:#3b82f6;">${a.reg}</td>
+            <td>${a.subject}</td>
+            <td>${a.className}</td>
+            <td style="font-size:13px;color:#6b7280;">${a.time}</td>
+        </tr>`).join('');
 
-        loadSubjectAnalysis();
-        loadLowAttendance();
+        loadSubjectAnalysis(attendance);
+        loadLowAttendance(attendance);
     }
 
-    function loadSubjectAnalysis() {
+    function loadSubjectAnalysis(attendance) {
         const analysisDiv = document.getElementById("subjectAnalysis");
-        
         const subjectStats = {};
-        
-        attendance.forEach(record => {
-            if (!subjectStats[record.subject]) {
-                subjectStats[record.subject] = new Set();
-            }
-            subjectStats[record.subject].add(record.reg);
+        attendance.forEach(r => {
+            if (!subjectStats[r.subject]) subjectStats[r.subject] = new Set();
+            subjectStats[r.subject].add(r.reg);
         });
-
-        const allStudents = new Set(attendance.map(a => a.reg));
-        const totalStudents = allStudents.size || 50;
-
-        let html = '';
-        Object.keys(subjectStats).forEach(subject => {
+        const totalStudents = new Set(attendance.map(a => a.reg)).size || 1;
+        let html = Object.keys(subjectStats).map(subject => {
             const attended = subjectStats[subject].size;
-            const percentage = ((attended / totalStudents) * 100).toFixed(1);
-            const isLow = percentage < 75;
-            
-            html += `
-                <div class="analysis-item ${isLow ? 'low' : ''}">
-                    <div>
-                        <strong>${subject}</strong>
-                        <div style="font-size: 13px; color: #6b7280; margin-top: 5px;">
-                            ${attended} / ${totalStudents} students
-                        </div>
-                    </div>
-                    <div class="percentage ${isLow ? 'low' : ''}">${percentage}%</div>
-                </div>
-            `;
-        });
-
-        analysisDiv.innerHTML = html || '<p style="color: #9ca3af; text-align: center; padding: 20px;">No data available</p>';
+            const pct = ((attended / totalStudents) * 100).toFixed(1);
+            const low = pct < 75;
+            return `<div class="analysis-item ${low?'low':''}">
+                <div><strong>${subject}</strong>
+                <div style="font-size:13px;color:#6b7280;margin-top:5px;">${attended} / ${totalStudents} students</div></div>
+                <div class="percentage ${low?'low':''}">${pct}%</div>
+            </div>`;
+        }).join('');
+        analysisDiv.innerHTML = html || '<p style="color:#9ca3af;text-align:center;padding:20px;">No data</p>';
     }
 
-    function loadLowAttendance() {
+    function loadLowAttendance(attendance) {
         const lowDiv = document.getElementById("lowAttendance");
-        
-        const studentStats = {};
-        const sessionsBySubject = {};
-        
-        attendance.forEach(record => {
-            if (!studentStats[record.reg]) {
-                studentStats[record.reg] = {};
-            }
-            if (!studentStats[record.reg][record.subject]) {
-                studentStats[record.reg][record.subject] = 0;
-            }
-            studentStats[record.reg][record.subject]++;
-            
-            if (!sessionsBySubject[record.subject]) {
-                sessionsBySubject[record.subject] = new Set();
-            }
-            sessionsBySubject[record.subject].add(record.qr);
+        const studentStats = {}, sessionsBySubject = {};
+        attendance.forEach(r => {
+            if (!studentStats[r.reg]) studentStats[r.reg] = {};
+            studentStats[r.reg][r.subject] = (studentStats[r.reg][r.subject] || 0) + 1;
+            if (!sessionsBySubject[r.subject]) sessionsBySubject[r.subject] = new Set();
+            sessionsBySubject[r.subject].add(r.qr);
         });
-
-        let html = '';
-        let hasLowAttendance = false;
-
+        let html = '', hasLow = false;
         Object.keys(studentStats).forEach(reg => {
             Object.keys(studentStats[reg]).forEach(subject => {
                 const attended = studentStats[reg][subject];
                 const total = sessionsBySubject[subject].size;
-                const percentage = ((attended / total) * 100).toFixed(1);
-                
-                if (percentage < 75) {
-                    hasLowAttendance = true;
-                    html += `
-                        <div class="student-item">
-                            <div>
-                                <strong>${reg}</strong>
-                                <div style="font-size: 13px; color: #991b1b; margin-top: 5px;">
-                                    Subject: ${subject} | ${attended}/${total} classes
-                                </div>
-                            </div>
-                            <div class="percentage low">${percentage}%</div>
-                        </div>
-                    `;
+                const pct = ((attended / total) * 100).toFixed(1);
+                if (pct < 75) {
+                    hasLow = true;
+                    html += `<div class="student-item">
+                        <div><strong>${reg}</strong>
+                        <div style="font-size:13px;color:#f87171;margin-top:5px;">${subject} | ${attended}/${total} classes</div></div>
+                        <div class="percentage low">${pct}%</div>
+                    </div>`;
                 }
             });
         });
-
-        if (!hasLowAttendance) {
-            html = '<p style="color: #059669; text-align: center; padding: 20px; background: #0a1f14; border-radius: 8px;">✔ All students have attendance above 75%</p>';
-        }
-
-        lowDiv.innerHTML = html;
+        lowDiv.innerHTML = hasLow ? html : '<p style="color:#34d399;text-align:center;padding:20px;background:#0a1f14;border-radius:8px;">✔ All students above 75%</p>';
     }
 
-    function exportToExcel() {
-        if (attendance.length === 0) {
-            alert("No attendance data to export");
-            return;
-        }
+    async function exportToExcel() {
+        const attendance = await dbGet("attendance");
+        if (!attendance.length) { alert("No attendance data to export"); return; }
 
         let csv = "Register No,Subject,Class,Date & Time\n";
-        
-        attendance.forEach(record => {
-            csv += `${record.reg},${record.subject},${record.className},${record.time}\n`;
-        });
-
-        csv += "\n\nSubject-wise Analysis\n";
-        csv += "Subject,Total Students,Present,Percentage\n";
-        
-        const subjectStats = {};
-        attendance.forEach(record => {
-            if (!subjectStats[record.subject]) {
-                subjectStats[record.subject] = new Set();
-            }
-            subjectStats[record.subject].add(record.reg);
-        });
-
-        const allStudents = new Set(attendance.map(a => a.reg));
-        const totalStudents = allStudents.size || 50;
-
-        Object.keys(subjectStats).forEach(subject => {
-            const attended = subjectStats[subject].size;
-            const percentage = ((attended / totalStudents) * 100).toFixed(1);
-            csv += `${subject},${totalStudents},${attended},${percentage}%\n`;
-        });
-
-        csv += "\n\nStudents Below 75% Attendance\n";
-        csv += "Register No,Subject,Classes Attended,Total Classes,Percentage\n";
-
-        const studentStats = {};
-        const sessionsBySubject = {};
-        
-        attendance.forEach(record => {
-            if (!studentStats[record.reg]) {
-                studentStats[record.reg] = {};
-            }
-            if (!studentStats[record.reg][record.subject]) {
-                studentStats[record.reg][record.subject] = 0;
-            }
-            studentStats[record.reg][record.subject]++;
-            
-            if (!sessionsBySubject[record.subject]) {
-                sessionsBySubject[record.subject] = new Set();
-            }
-            sessionsBySubject[record.subject].add(record.qr);
-        });
-
-        Object.keys(studentStats).forEach(reg => {
-            Object.keys(studentStats[reg]).forEach(subject => {
-                const attended = studentStats[reg][subject];
-                const total = sessionsBySubject[subject].size;
-                const percentage = ((attended / total) * 100).toFixed(1);
-                
-                if (percentage < 75) {
-                    csv += `${reg},${subject},${attended},${total},${percentage}%\n`;
-                }
-            });
-        });
+        attendance.forEach(r => { csv += `${r.reg},${r.subject},${r.className},${r.time}\n`; });
 
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Attendance_Report_${new Date().toISOString().split('T')[0]}.csv`;
+        a.download = `Attendance_${new Date().toISOString().split('T')[0]}.csv`;
         a.click();
         window.URL.revokeObjectURL(url);
     }
